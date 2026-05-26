@@ -9,3 +9,9 @@ export async function createTodo(formData: FormData) {
   await addTodo(name.trim())
   revalidatePath("/todos")
 }
+
+export async function createTodoClient(name: string) {
+  if (!name?.trim()) return
+  await addTodo(name.trim())
+  revalidatePath("/todos")
+}
