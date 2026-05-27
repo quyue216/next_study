@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TodoItem } from "./todo-item"
+import { toggleTodoState } from "../actions"
 
 interface Todo {
   id: string
@@ -37,7 +38,13 @@ export function TodoList({ todos }: TodoListProps) {
             </TableCell>
           </TableRow>
         ) : (
-          todos.map((todo) => <TodoItem key={todo.id} todo={todo} />)
+          todos.map((todo) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={toggleTodoState}
+            />
+          ))
         )}
       </TableBody>
     </Table>

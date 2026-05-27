@@ -66,3 +66,27 @@ export async function toggleTodo(id: string): Promise<Todo[]> {
   await writeData(updated)
   return updated
 }
+
+export async function setTodoCompleted(
+  id: string,
+  completed: boolean
+): Promise<Todo[]> {
+  const todos = await readData()
+  const updated = todos.map((t) =>
+    t.id === id ? { ...t, completed } : t
+  )
+  await writeData(updated)
+  return updated
+}
+
+
+export async function setAllTodoCompleted(
+  completed: boolean
+): Promise<Todo[]> {
+  const todos = await readData()
+  const updated = todos.map((t) =>
+  ({ ...t, completed }) 
+  )
+  await writeData(updated)
+  return updated
+}
