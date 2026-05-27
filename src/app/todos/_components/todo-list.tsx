@@ -28,12 +28,13 @@ export function TodoList({ todos }: TodoListProps) {
           <TableHead>任务名称</TableHead>
           <TableHead>创建时间</TableHead>
           <TableHead>状态</TableHead>
+          <TableHead>操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {todos.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+            <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
               暂无任务
             </TableCell>
           </TableRow>

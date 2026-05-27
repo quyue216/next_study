@@ -1,6 +1,6 @@
 "use server"
 
-import { addTodo ,setTodoCompleted,setAllTodoCompleted} from "./_lib/todo-service"
+import { addTodo, setTodoCompleted, setAllTodoCompleted, deleteTodo, clearTodos } from "./_lib/todo-service"
 import { revalidatePath } from "next/cache"
 
 export async function createTodo(formData: FormData) {
@@ -9,7 +9,7 @@ export async function createTodo(formData: FormData) {
   await addTodo(name.trim())
   revalidatePath("/todos")
 }
-
+//方法 命名标识给客户端使用还是服务端
 export async function createTodoClient(name: string) {
   if (!name?.trim()) return
   await addTodo(name.trim())
@@ -27,3 +27,15 @@ export async function setAllTodosCompleted(completed: boolean) {
   await setAllTodoCompleted(completed)
   revalidatePath('/todos')
 }
+
+export async function removeTodo(id: string) {
+  if (!id) return
+  await deleteTodo(id)
+  revalidatePath('/todos')
+}
+
+export async function removeAllTodos() {
+  await clearTodos()
+  revalidatePath('/todos')
+}
+

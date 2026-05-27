@@ -1,7 +1,8 @@
 "use client"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import { setAllTodosCompleted } from "../actions"
+import { Button } from "@/components/ui/button"
+import { setAllTodosCompleted, removeAllTodos } from "../actions"
 
 interface Todo {
   id: string
@@ -33,6 +34,11 @@ export function TodoFooter({ todos }: TodoFooterProps) {
           />
           <span className="text-xs">全部完成</span>
         </div>
+        <Button variant="destructive" size="sm" onClick={async () => {
+          await removeAllTodos()
+        }}>
+          删除全部
+        </Button>
       </div>
     </div>
   )

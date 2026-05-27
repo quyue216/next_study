@@ -85,8 +85,13 @@ export async function setAllTodoCompleted(
 ): Promise<Todo[]> {
   const todos = await readData()
   const updated = todos.map((t) =>
-  ({ ...t, completed }) 
+  ({ ...t, completed })
   )
   await writeData(updated)
   return updated
+}
+
+export async function clearTodos(): Promise<Todo[]> {
+  await writeData([])
+  return []
 }
