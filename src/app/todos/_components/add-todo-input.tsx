@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createTodoClient } from '../actions'
+import { refresh } from 'next/cache'
 
 export function AddTodoInput() {
   const [value, setValue] = useState('')
@@ -10,6 +11,7 @@ export function AddTodoInput() {
     if (!value.trim()) return
     await createTodoClient(value.trim())
     setValue('')
+    refresh()
   }
 
   return (
