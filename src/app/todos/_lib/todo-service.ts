@@ -1,7 +1,4 @@
-import { readFile, writeFile } from "fs/promises"
-import path from "path"
-
-const DATA_PATH = path.join(process.cwd(), "src/app/todos/data.json")
+import { supabase } from "@/lib/supabase"
 
 export interface Todo {
   id: string
@@ -10,83 +7,102 @@ export interface Todo {
   completed: boolean
 }
 
-async function readData(): Promise<Todo[]> {
-  const raw = await readFile(DATA_PATH, "utf-8")
-  return JSON.parse(raw)
-}
-
-async function writeData(todos: Todo[]): Promise<void> {
-  await writeFile(DATA_PATH, JSON.stringify(todos, null, 2) + "\n")
+function mapRow(row: any): Todo {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: row.created_at,
+    completed: row.completed,
+  }
 }
 
 export async function getTodos(): Promise<Todo[]> {
-  return readData()
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return (data ?? []).map(mapRow)
 }
 
 export async function getTodoById(id: string): Promise<Todo | undefined> {
-  const todos = await readData()
-  return todos.find((t) => t.id === id)
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (error || !data) return undefined
+  return mapRow(data)
 }
 
 export async function addTodo(name: string): Promise<Todo[]> {
-  const todos = await readData()
-  const newTodo: Todo = {
-    id: crypto.randomUUID(),
-    name,
-    createdAt: new Date().toISOString(),
-    completed: false,
-  }
-  const updated = [...todos, newTodo]
-  await writeData(updated)
-  return updated
+  const { error } = await supabase
+    .from("todos")
+    .insert({ name, completed: false })
+
+  if (error) throw error
+  return getTodos()
 }
 
 export async function updateTodo(
   id: string,
   updates: Partial<Pick<Todo, "name" | "completed">>
 ): Promise<Todo[]> {
-  const todos = await readData()
-  const updated = todos.map((t) => (t.id === id ? { ...t, ...updates } : t))
-  await writeData(updated)
-  return updated
+  const payload: Record<string, any> = {}
+  if (updates.name !== undefined) payload.name = updates.name
+  if (updates.completed !== undefined) payload.completed = updates.completed
+
+  const { error } = await supabase.from("todos").update(payload).eq("id", id)
+
+  if (error) throw error
+  return getTodos()
 }
 
 export async function deleteTodo(id: string): Promise<Todo[]> {
-  const todos = await readData()
-  const updated = todos.filter((t) => t.id !== id)
-  await writeData(updated)
-  return updated
+  const { error } = await supabase.from("todos").delete().eq("id", id)
+
+  if (error) throw error
+  return getTodos()
 }
 
 export async function toggleTodo(id: string): Promise<Todo[]> {
-  const todos = await readData()
-  const updated = todos.map((t) =>
-    t.id === id ? { ...t, completed: !t.completed } : t
-  )
-  await writeData(updated)
-  return updated
+  const todo = await getTodoById(id)
+  if (!todo) return getTodos()
+
+  const { error } = await supabase
+    .from("todos")
+    .update({ completed: !todo.completed })
+    .eq("id", id)
+
+  if (error) throw error
+  return getTodos()
 }
 
 export async function setTodoCompleted(
   id: string,
   completed: boolean
 ): Promise<Todo[]> {
-  const todos = await readData()
-  const updated = todos.map((t) =>
-    t.id === id ? { ...t, completed } : t
-  )
-  await writeData(updated)
-  return updated
-}
+  const { error } = await supabase
+    .from("todos")
+    .update({ completed })
+    .eq("id", id)
 
+  if (error) throw error
+  return getTodos()
+}
 
 export async function setAllTodoCompleted(
   completed: boolean
 ): Promise<Todo[]> {
-  const todos = await readData()
-  const updated = todos.map((t) =>
-  ({ ...t, completed }) 
-  )
-  await writeData(updated)
-  return updated
+  const todos = await getTodos()
+  for (const todo of todos) {
+    const { error } = await supabase
+      .from("todos")
+      .update({ completed })
+      .eq("id", todo.id)
+    if (error) throw error
+  }
+  return getTodos()
 }
