@@ -11,7 +11,13 @@
       "mcp__chrome-devtools__evaluate_script",
       "mcp__github-mcp__get_file_contents",
       "Bash(gh auth *)",
-      "mcp__github-mcp__search_repositories"
+      "mcp__github-mcp__search_repositories",
+      "mcp__supabase__apply_migration"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "chrome-devtools",
+    "supabase"
+  ]
 }

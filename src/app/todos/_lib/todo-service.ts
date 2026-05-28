@@ -106,3 +106,9 @@ export async function setAllTodoCompleted(
   }
   return getTodos()
 }
+
+export async function clearTodos(): Promise<Todo[]> {
+  const { error } = await supabase.from("todos").delete().neq("id", "00000000-0000-0000-0000-000000000000")
+  if (error) throw error
+  return getTodos()
+}

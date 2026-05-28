@@ -9,7 +9,7 @@ export default async function Todos() {
   const todos = await getTodos()
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto min-w-3xl p-8">
       <TodoHeader>
         <div className="space-y-4">
           <div>

@@ -2,6 +2,8 @@
 
 import { useId } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
+import { removeTodo } from "../actions"
 
 interface Todo {
   id: string
@@ -40,6 +42,11 @@ export function TodoItem({ todo, onToggle }: TodoItemProps) {
             {todo.completed ? "已完成" : "未完成"}
           </label>
         </div>
+      </td>
+      <td className="p-2 align-middle">
+        <Button variant="destructive" size="sm" onClick={async () => {
+          await removeTodo(todo.id)
+        }}>删除</Button>
       </td>
     </tr>
   )
