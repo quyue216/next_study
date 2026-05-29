@@ -29,8 +29,8 @@ export default async function Todos() {
           </div>
         </div>
       </TodoHeader>
-      <TodoList todos={todos} />
-      <TodoFooter todos={todos} />
+      <TodoList initialTodos={todos} />
+      <TodoFooter initialTodos={todos} />
     </div>
   )
 }

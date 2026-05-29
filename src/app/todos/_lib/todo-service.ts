@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { supabaseClient } from "@/lib/supabase.client"
 
 export interface Todo {
   id: string
@@ -17,7 +17,7 @@ function mapRow(row: any): Todo {
 }
 
 export async function getTodos(): Promise<Todo[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("todos")
     .select("*")
     .order("created_at", { ascending: false })
@@ -27,7 +27,7 @@ export async function getTodos(): Promise<Todo[]> {
 }
 
 export async function getTodoById(id: string): Promise<Todo | undefined> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("todos")
     .select("*")
     .eq("id", id)
@@ -38,7 +38,7 @@ export async function getTodoById(id: string): Promise<Todo | undefined> {
 }
 
 export async function addTodo(name: string): Promise<Todo[]> {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from("todos")
     .insert({ name, completed: false })
 
@@ -54,14 +54,14 @@ export async function updateTodo(
   if (updates.name !== undefined) payload.name = updates.name
   if (updates.completed !== undefined) payload.completed = updates.completed
 
-  const { error } = await supabase.from("todos").update(payload).eq("id", id)
+  const { error } = await supabaseClient.from("todos").update(payload).eq("id", id)
 
   if (error) throw error
   return getTodos()
 }
 
 export async function deleteTodo(id: string): Promise<Todo[]> {
-  const { error } = await supabase.from("todos").delete().eq("id", id)
+  const { error } = await supabaseClient.from("todos").delete().eq("id", id)
 
   if (error) throw error
   return getTodos()
@@ -71,7 +71,7 @@ export async function toggleTodo(id: string): Promise<Todo[]> {
   const todo = await getTodoById(id)
   if (!todo) return getTodos()
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from("todos")
     .update({ completed: !todo.completed })
     .eq("id", id)
@@ -84,7 +84,7 @@ export async function setTodoCompleted(
   id: string,
   completed: boolean
 ): Promise<Todo[]> {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from("todos")
     .update({ completed })
     .eq("id", id)
@@ -98,7 +98,7 @@ export async function setAllTodoCompleted(
 ): Promise<Todo[]> {
   const todos = await getTodos()
   for (const todo of todos) {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from("todos")
       .update({ completed })
       .eq("id", todo.id)
@@ -108,7 +108,7 @@ export async function setAllTodoCompleted(
 }
 
 export async function clearTodos(): Promise<Todo[]> {
-  const { error } = await supabase.from("todos").delete().neq("id", "00000000-0000-0000-0000-000000000000")
+  const { error } = await supabaseClient.from("todos").delete().neq("id", "00000000-0000-0000-0000-000000000000")
   if (error) throw error
   return getTodos()
 }
