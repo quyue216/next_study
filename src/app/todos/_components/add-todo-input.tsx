@@ -11,7 +11,7 @@ export function AddTodoInput() {
     if (!value.trim()) return
     await createTodoClient(value.trim())
     setValue('')
-    refresh()
+    // refresh()
   }
 
   return (
