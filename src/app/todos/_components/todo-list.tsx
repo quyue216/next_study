@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Table,
@@ -27,12 +28,16 @@ interface TodoListProps {
 export function TodoList({ initialTodos }: TodoListProps) {
   const queryClient = useQueryClient()
 
+  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
+  useEffect(() => {
+    queryClient.setQueryData(["todos"], initialTodos)
+  }, [initialTodos, queryClient])
+
   // 使用 React Query 管理状态
   const { data: todos = [] } = useQuery({
     queryKey: ["todos"],
     queryFn: getTodos,
     initialData: initialTodos,
-    // 不要设置 Infinity，让数据可以被重新验证
     staleTime: 0,
   })
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { setAllTodosCompleted, removeAllTodos } from "../actions"
 import { getTodos } from "../_lib/todo-service"
@@ -17,6 +18,11 @@ interface TodoFooterProps {
 
 export function TodoFooter({ initialTodos }: TodoFooterProps) {
   const queryClient = useQueryClient()
+
+  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
+  useEffect(() => {
+    queryClient.setQueryData(["todos"], initialTodos)
+  }, [initialTodos, queryClient])
 
   // 使用 useQuery 订阅 todos 数据变化
   const { data: todos = initialTodos } = useQuery({
