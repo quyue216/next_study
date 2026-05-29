@@ -32,7 +32,8 @@ export function TodoList({ initialTodos }: TodoListProps) {
     queryKey: ["todos"],
     queryFn: getTodos,
     initialData: initialTodos,
-    staleTime: Infinity,
+    // 不要设置 Infinity，让数据可以被重新验证
+    staleTime: 0,
   })
 
   const toggleMutation = useMutation({

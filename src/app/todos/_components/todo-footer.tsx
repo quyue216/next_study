@@ -23,7 +23,7 @@ export function TodoFooter({ initialTodos }: TodoFooterProps) {
     queryKey: ["todos"],
     queryFn: getTodos,
     initialData: initialTodos,
-    staleTime: Infinity,
+    staleTime: 0,
   })
 
   const total = todos.length
