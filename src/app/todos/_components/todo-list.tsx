@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Table,
@@ -27,11 +26,6 @@ interface TodoListProps {
 
 export function TodoList({ initialTodos }: TodoListProps) {
   const queryClient = useQueryClient()
-
-  // 当服务端传入新的 initialTodos 时，同步更新 React Query 缓存
-  useEffect(() => {
-    queryClient.setQueryData(["todos"], initialTodos)
-  }, [initialTodos, queryClient])
 
   // 使用 React Query 管理状态
   const { data: todos = [] } = useQuery({
