@@ -12,7 +12,10 @@
       "mcp__github-mcp__get_file_contents",
       "Bash(gh auth *)",
       "mcp__github-mcp__search_repositories",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm run *)",
+      "Bash(vercel *)"
     ]
   },
   "enableAllProjectMcpServers": true,
