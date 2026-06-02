@@ -1,37 +1,70 @@
-"use client"
+import { Suspense } from 'react'
 
-import { useState } from "react"
-
-export default function CounterTest() {
-  const [count, setCount] = useState(0)
+async function PostList() {
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=5', {
+    // 禁用 Next.js 数据缓存，每次请求都重新获取数据
+    // 否则刷新页面会直接返回缓存结果，看不到 Suspense loading 效果
+    cache: 'no-store',
+  })
+  const posts = await res.json()
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-8">
-      <h1 className="text-3xl font-bold">计数器测试</h1>
-      <div className="text-6xl font-mono font-bold text-primary">{count}</div>
-      <div className="flex gap-4">
-        <button
-          onClick={() => setCount(c => c - 1)}
-          className="px-6 py-3 rounded-lg bg-muted hover:bg-muted/80 text-lg font-medium transition-colors"
-        >
-          -1
-        </button>
-        <button
-          onClick={() => setCount(0)}
-          className="px-6 py-3 rounded-lg bg-secondary hover:bg-secondary/80 text-lg font-medium transition-colors"
-        >
-          重置
-        </button>
-        <button
-          onClick={() => setCount(c => c + 1)}
-          className="px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium transition-colors"
-        >
-          +1
-        </button>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        点击按钮测试客户端交互是否正常
-      </p>
+    <ul className="space-y-3">
+      {posts.map((post: { id: number; title: string }) => (
+        <li key={post.id} className="p-3 rounded-lg border bg-card">
+          <span className="font-medium">{post.id}. {post.title}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+async function SlowPostList() {
+  await new Promise((resolve) => setTimeout(resolve, 2000))
+  const res = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=3&_start=5', {
+    // 禁用 Next.js 数据缓存，每次请求都重新获取数据
+    cache: 'no-store',
+  })
+  const posts = await res.json()
+
+  return (
+    <ul className="space-y-3">
+      {posts.map((post: { id: number; title: string }) => (
+        <li key={post.id} className="p-3 rounded-lg border bg-card">
+          <span className="font-medium">{post.id}. {post.title}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function Fallback({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-muted-foreground p-3">
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      <span>{label}</span>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <main className="max-w-2xl mx-auto p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Suspense Demo</h1>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Fast Posts</h2>
+        <Suspense fallback={<Fallback label="Loading fast posts..." />}>
+          <PostList />
+        </Suspense>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Slow Posts (2s delay)</h2>
+        <Suspense fallback={<Fallback label="Loading slow posts..." />}>
+          <SlowPostList />
+        </Suspense>
+      </section>
+    </main>
   )
 }
