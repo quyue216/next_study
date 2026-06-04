@@ -14,7 +14,10 @@
       "mcp__github-mcp__search_repositories",
       "mcp__supabase__apply_migration",
       "Bash(git pull:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm run *)",
+      "Bash(vercel *)"
     ]
   },
   "enableAllProjectMcpServers": true,

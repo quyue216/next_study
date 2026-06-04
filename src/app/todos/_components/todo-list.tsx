@@ -28,7 +28,7 @@ interface TodoListProps {
 export function TodoList({ initialTodos }: TodoListProps) {
   const queryClient = useQueryClient()
 
-  // 当服务端传入新的 initialTodos 时，同步更新 React Query 缓存
+  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
   useEffect(() => {
     queryClient.setQueryData(["todos"], initialTodos)
   }, [initialTodos, queryClient])
@@ -38,7 +38,7 @@ export function TodoList({ initialTodos }: TodoListProps) {
     queryKey: ["todos"],
     queryFn: getTodos,
     initialData: initialTodos,
-    staleTime: Infinity,
+    staleTime: 0,
   })
 
   const toggleMutation = useMutation({

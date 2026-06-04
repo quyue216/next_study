@@ -1,8 +1,9 @@
 "use client"
 
-import { useQueryClient, useMutation } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
 import { setAllTodosCompleted, removeAllTodos } from "../actions"
+import { getTodos } from "../_lib/todo-service"
 
 interface Todo {
   id: string
@@ -17,10 +18,19 @@ interface TodoFooterProps {
 
 export function TodoFooter({ initialTodos }: TodoFooterProps) {
   const queryClient = useQueryClient()
-  const router = useRouter()
 
-  // 获取当前 todos 状态
-  const todos = queryClient.getQueryData<Todo[]>(["todos"]) ?? initialTodos
+  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
+  useEffect(() => {
+    queryClient.setQueryData(["todos"], initialTodos)
+  }, [initialTodos, queryClient])
+
+  // 使用 useQuery 订阅 todos 数据变化
+  const { data: todos = initialTodos } = useQuery({
+    queryKey: ["todos"],
+    queryFn: getTodos,
+    initialData: initialTodos,
+    staleTime: 0,
+  })
 
   const total = todos.length
   const completed = todos.filter((t) => t.completed).length
@@ -42,7 +52,7 @@ export function TodoFooter({ initialTodos }: TodoFooterProps) {
       }
     },
     onSettled: () => {
-      router.refresh()
+      queryClient.invalidateQueries({ queryKey: ["todos"] })
     },
   })
 
@@ -60,7 +70,7 @@ export function TodoFooter({ initialTodos }: TodoFooterProps) {
       }
     },
     onSettled: () => {
-      router.refresh()
+      queryClient.invalidateQueries({ queryKey: ["todos"] })
     },
   })
 
