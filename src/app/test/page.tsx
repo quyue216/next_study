@@ -1,4 +1,6 @@
 import { Suspense } from 'react'
+import { CachedBuildId } from './_components/cache-test'
+import { DynamicBuildId } from './_components/no-cache-test'
 
 async function PostList() {
   const res = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=5', {
@@ -50,17 +52,26 @@ function Fallback({ label }: { label: string }) {
 export default function Page() {
   return (
     <main className="max-w-2xl mx-auto p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Suspense Demo</h1>
+      <h1 className="text-3xl font-bold">Next.js 特性测试</h1>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">缓存对比测试</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CachedBuildId />
+          <DynamicBuildId />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          同时打开多个浏览器窗口或无痕窗口访问此页面，观察左右两个 UUID 的行为差异。
+        </p>
+      </section>
+
+      <hr />
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Fast Posts</h2>
+        <h2 className="text-xl font-semibold">Suspense + Streaming 测试</h2>
         <Suspense fallback={<Fallback label="Loading fast posts..." />}>
           <PostList />
         </Suspense>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Slow Posts (2s delay)</h2>
         <Suspense fallback={<Fallback label="Loading slow posts..." />}>
           <SlowPostList />
         </Suspense>
