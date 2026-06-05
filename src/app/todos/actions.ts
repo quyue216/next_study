@@ -4,9 +4,14 @@ import { addTodo, setTodoCompleted, setAllTodoCompleted, deleteTodo, clearTodos 
 import { revalidatePath } from "next/cache"
 
 export async function createTodo(formData: FormData) {
+  console.log("[createTodo] Called with:", Object.fromEntries(formData))
   const name = formData.get("name") as string
-  if (!name?.trim()) return
+  if (!name?.trim()) {
+    console.log("[createTodo] Empty name, returning")
+    return
+  }
   await addTodo(name.trim())
+  console.log("[createTodo] Revalidating /todos")
   revalidatePath("/todos")
 }
 //方法 命名标识给客户端使用还是服务端

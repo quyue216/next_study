@@ -17,12 +17,17 @@ function mapRow(row: any): Todo {
 }
 
 export async function getTodos(): Promise<Todo[]> {
+  console.log("[getTodos] Fetching todos...")
   const { data, error } = await supabaseClient
     .from("todos")
     .select("*")
     .order("created_at", { ascending: false })
 
-  if (error) throw error
+  if (error) {
+    console.error("[getTodos] Error:", error)
+    throw error
+  }
+  console.log("[getTodos] Got data:", data)
   return (data ?? []).map(mapRow)
 }
 
@@ -38,11 +43,16 @@ export async function getTodoById(id: string): Promise<Todo | undefined> {
 }
 
 export async function addTodo(name: string): Promise<Todo[]> {
+  console.log("[addTodo] Adding todo:", name)
   const { error } = await supabaseClient
     .from("todos")
     .insert({ name, completed: false })
 
-  if (error) throw error
+  if (error) {
+    console.error("[addTodo] Error:", error)
+    throw error
+  }
+  console.log("[addTodo] Success")
   return getTodos()
 }
 

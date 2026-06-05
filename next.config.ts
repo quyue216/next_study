@@ -4,13 +4,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/todos',
-        destination: '/tasks',
+        // 访问 /tasks 时，内部映射到 /todos 渲染
+        source: '/tasks',
+        destination: '/todos',
       },
     ]
-  },
-  experimental: {
-    useCache: true,
   },
 };
 

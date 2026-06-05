@@ -4,7 +4,6 @@ import { TodoFooter } from "./_components/todo-footer"
 import { AddTodoInput } from "./_components/add-todo-input"
 import { getTodos } from "./_lib/todo-service"
 import { createTodo } from "./actions"
-
 export default async function Todos() {
   const todos = await getTodos()
 
