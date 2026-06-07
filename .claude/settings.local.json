@@ -15,7 +15,13 @@
       "mcp__supabase__apply_migration",
       "Bash(pnpm exec *)",
       "Bash(pnpm run *)",
-      "Bash(vercel *)"
+      "Bash(vercel *)",
+      "WebFetch(domain:help.dida365.com)",
+      "WebSearch",
+      "Bash(dida --help)",
+      "Bash(dida --version)",
+      "Bash(where dida *)",
+      "Bash(command -v dida)"
     ]
   },
   "enableAllProjectMcpServers": true,
