@@ -42,6 +42,7 @@ export function TodoList({ initialTodos }: TodoListProps) {
   })
 
   const toggleMutation = useMutation({
+    mutationKey: ["todo-mutation"],
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
       toggleTodoState(id, completed),
     onMutate: async ({ id, completed }) => {
@@ -60,11 +61,15 @@ export function TodoList({ initialTodos }: TodoListProps) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
+      // 等所有 todo mutation 完成后再统一刷新，避免并发 refetch 覆盖乐观更新
+      if (queryClient.isMutating({ mutationKey: ["todo-mutation"] }) === 0) {
+        queryClient.invalidateQueries({ queryKey: ["todos"] })
+      }
     },
   })
 
   const deleteMutation = useMutation({
+    mutationKey: ["todo-mutation"],
     mutationFn: (id: string) => removeTodo(id),
     onMutate: async (id) => {
       // 乐观更新
@@ -82,7 +87,10 @@ export function TodoList({ initialTodos }: TodoListProps) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
+      // 等所有 todo mutation 完成后再统一刷新，避免并发 refetch 覆盖乐观更新
+      if (queryClient.isMutating({ mutationKey: ["todo-mutation"] }) === 0) {
+        queryClient.invalidateQueries({ queryKey: ["todos"] })
+      }
     },
   })
 
@@ -118,7 +126,10 @@ export function TodoList({ initialTodos }: TodoListProps) {
               todo={todo}
               onToggle={handleToggle}
               onDelete={handleDelete}
-              isPending={toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
+              isPending={
+                (toggleMutation.isPending && toggleMutation.variables?.id === todo.id) ||
+                (deleteMutation.isPending && deleteMutation.variables === todo.id)
+              }
             />
           ))
         )}

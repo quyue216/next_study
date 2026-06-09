@@ -39,11 +39,12 @@ export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps)
           <Checkbox
             id={checkboxId}
             checked={todo.completed}
+            disabled={isPending}
             onCheckedChange={(checked) => {
               onToggle(todo.id, checked as boolean)
             }}
           />
-          <label htmlFor={checkboxId} className="text-sm text-muted-foreground cursor-pointer">
+          <label htmlFor={checkboxId} className={`text-sm text-muted-foreground ${isPending ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             {todo.completed ? "已完成" : "未完成"}
           </label>
         </div>
@@ -52,6 +53,7 @@ export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps)
         <Button
           variant="destructive"
           size="sm"
+          disabled={isPending}
           onClick={() => onDelete(todo.id)}
         >
           删除
