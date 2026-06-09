@@ -1,6 +1,6 @@
 "use client"
 
-import { useId } from "react"
+import { useEffect, useId, useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 
@@ -20,14 +20,19 @@ interface TodoItemProps {
 
 export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps) {
   const checkboxId = useId()
+  const [createdAtText, setCreatedAtText] = useState("")
+
+  useEffect(() => {
+    setCreatedAtText(new Date(todo.createdAt).toLocaleString("zh-CN"))
+  }, [todo.createdAt])
 
   return (
     <tr className={`border-b transition-colors hover:bg-muted/50 ${isPending ? "opacity-50" : ""}`}>
       <td className={`p-2 align-middle ${todo.completed ? "line-through text-muted-foreground" : ""}`}>
         {todo.name}
       </td>
-      <td className="p-2 align-middle">
-        {new Date(todo.createdAt).toLocaleString("zh-CN")}
+      <td className="p-2 align-middle" suppressHydrationWarning>
+        {createdAtText}
       </td>
       <td className="p-2 align-middle">
         <div className="flex items-center gap-2">
