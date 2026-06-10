@@ -1,107 +1,52 @@
-"use client"
+'use client'
 
-import { useEffect } from "react"
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query"
-import { setAllTodosCompleted, removeAllTodos } from "../actions"
-import { getTodos } from "../_lib/todo-service"
-
-interface Todo {
-  id: string
-  name: string
-  createdAt: string
-  completed: boolean
-}
+import { Todo } from '../_lib/todo-service'
+import { cn } from '@/lib/utils'
 
 interface TodoFooterProps {
-  initialTodos: Todo[]
+  todos: Todo[]
+  onSetAll: (completed: boolean) => void
+  onClear: () => void
+  isPending: boolean
 }
 
-export function TodoFooter({ initialTodos }: TodoFooterProps) {
-  const queryClient = useQueryClient()
-
-  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
-  useEffect(() => {
-    queryClient.setQueryData(["todos"], initialTodos)
-  }, [initialTodos, queryClient])
-
-  // 使用 useQuery 订阅 todos 数据变化
-  const { data: todos = initialTodos } = useQuery({
-    queryKey: ["todos"],
-    queryFn: getTodos,
-    initialData: initialTodos,
-    staleTime: 0,
-  })
-
+export function TodoFooter({ todos, onSetAll, onClear, isPending }: TodoFooterProps) {
   const total = todos.length
   const completed = todos.filter((t) => t.completed).length
-  const pending = total - completed
-
-  const setAllMutation = useMutation({
-    mutationFn: (completed: boolean) => setAllTodosCompleted(completed),
-    onMutate: async (completed) => {
-      await queryClient.cancelQueries({ queryKey: ["todos"] })
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"])
-      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
-        old?.map((t) => ({ ...t, completed }))
-      )
-      return { previousTodos }
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousTodos) {
-        queryClient.setQueryData(["todos"], context.previousTodos)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
-    },
-  })
-
-  const clearMutation = useMutation({
-    mutationFn: () => removeAllTodos(),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["todos"] })
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"])
-      queryClient.setQueryData<Todo[]>(["todos"], [])
-      return { previousTodos }
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousTodos) {
-        queryClient.setQueryData(["todos"], context.previousTodos)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
-    },
-  })
+  const pendingCount = total - completed
+  const allChecked = completed === total && total > 0
 
   return (
-    <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
       <span>共 {total} 项任务</span>
       <div className="flex items-center gap-4">
         <span>已完成: {completed}</span>
-        <span>待完成: {pending}</span>
+        <span>待完成: {pendingCount}</span>
+
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={completed === total && total > 0}
-            disabled={total === 0}
-            onChange={(e) => setAllMutation.mutate(e.target.checked)}
+            checked={allChecked}
+            disabled={total === 0 || isPending}
+            onChange={(e) => onSetAll(e.target.checked)}
+            className="cursor-pointer disabled:cursor-not-allowed"
           />
-          <span className="text-xs">全部完成</span>
+          <span className={cn('text-xs', isPending && 'text-blue-500')}>
+            {isPending ? '同步中...' : '全部完成'}
+          </span>
         </div>
+
         <button
-          onClick={() => clearMutation.mutate()}
-          disabled={total === 0}
-          style={{
-            padding: '4px 12px',
-            backgroundColor: total === 0 ? '#9ca3af' : '#ef4444',
-            color: 'white',
-            borderRadius: '6px',
-            border: 'none',
-            cursor: total === 0 ? 'not-allowed' : 'pointer',
-          }}
+          onClick={onClear}
+          disabled={total === 0 || isPending}
+          className={cn(
+            'px-3 py-1 rounded-md text-white text-sm transition-all',
+            total === 0 || isPending
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-red-500 hover:bg-red-600 active:scale-95'
+          )}
         >
-          删除全部
+          {isPending ? '同步中...' : '删除全部'}
         </button>
       </div>
     </div>

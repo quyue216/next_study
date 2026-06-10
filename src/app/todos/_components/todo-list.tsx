@@ -1,7 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Table,
   TableBody,
@@ -11,89 +9,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TodoItem } from "./todo-item"
-import { toggleTodoState, removeTodo } from "../actions"
-import { getTodos } from "../_lib/todo-service"
-
-interface Todo {
-  id: string
-  name: string
-  createdAt: string
-  completed: boolean
-}
+import { Todo } from "../_lib/todo-service"
 
 interface TodoListProps {
-  initialTodos: Todo[]
+  todos: Todo[]
+  onToggle: (id: string, completed: boolean) => void
+  onDelete: (id: string) => void
+  isPending: boolean
 }
 
-export function TodoList({ initialTodos }: TodoListProps) {
-  const queryClient = useQueryClient()
-
-  // 当服务端传入新的 initialTodos 时（如 Form Action + revalidatePath），同步更新缓存
-  useEffect(() => {
-    queryClient.setQueryData(["todos"], initialTodos)
-  }, [initialTodos, queryClient])
-
-  // 使用 React Query 管理状态
-  const { data: todos = [] } = useQuery({
-    queryKey: ["todos"],
-    queryFn: getTodos,
-    initialData: initialTodos,
-    staleTime: 0,
-  })
-
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      toggleTodoState(id, completed),
-    onMutate: async ({ id, completed }) => {
-      // 乐观更新
-      await queryClient.cancelQueries({ queryKey: ["todos"] })
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"])
-      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
-        old?.map((t) => (t.id === id ? { ...t, completed } : t))
-      )
-      return { previousTodos }
-    },
-    onError: (_err, _variables, context) => {
-      // 回滚
-      if (context?.previousTodos) {
-        queryClient.setQueryData(["todos"], context.previousTodos)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => removeTodo(id),
-    onMutate: async (id) => {
-      // 乐观更新
-      await queryClient.cancelQueries({ queryKey: ["todos"] })
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"])
-      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
-        old?.filter((t) => t.id !== id)
-      )
-      return { previousTodos }
-    },
-    onError: (_err, _id, context) => {
-      // 回滚
-      if (context?.previousTodos) {
-        queryClient.setQueryData(["todos"], context.previousTodos)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] })
-    },
-  })
-
-  const handleToggle = (id: string, completed: boolean) => {
-    toggleMutation.mutate({ id, completed })
-  }
-
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id)
-  }
-
+export function TodoList({ todos, onToggle, onDelete, isPending }: TodoListProps) {
   return (
     <Table>
       <TableHeader>
@@ -116,9 +41,9 @@ export function TodoList({ initialTodos }: TodoListProps) {
             <TodoItem
               key={todo.id}
               todo={todo}
-              onToggle={handleToggle}
-              onDelete={handleDelete}
-              isPending={toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              isPending={isPending}
             />
           ))
         )}
