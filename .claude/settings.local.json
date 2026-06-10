@@ -25,7 +25,10 @@
       "Bash(where dida *)",
       "Bash(command -v dida)",
       "Bash(grep -o \"__next_f.push\\\\|__next_r\\\\|TURBOPACK\\\\|Error\\\\|undefined\" C:\\\\\\\\Users\\\\\\\\quyue\\\\\\\\.claude\\\\\\\\projects\\\\\\\\E--qy-task-2026-track-work\\\\\\\\0e065dea-962e-452a-9f61-5d14909b40c3\\\\\\\\tool-results\\\\\\\\bu98bpatq.txt)",
-      "Bash(grep -o '<script[^>]*>[^<]\\\\{1,150\\\\}' \"/c/Users/quyue/.claude/projects/E--qy-task-2026-track-work/0e065dea-962e-452a-9f61-5d14909b40c3/tool-results/bu98bpatq.txt\")"
+      "Bash(grep -o '<script[^>]*>[^<]\\\\{1,150\\\\}' \"/c/Users/quyue/.claude/projects/E--qy-task-2026-track-work/0e065dea-962e-452a-9f61-5d14909b40c3/tool-results/bu98bpatq.txt\")",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__resize_page",
+      "mcp__chrome-devtools__emulate"
     ]
   },
   "enableAllProjectMcpServers": true,

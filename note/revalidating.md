@@ -22,3 +22,18 @@ revalidating (缓存何时更新/失效)
 
 
 服务端数据与客户端保持一致
+
+
+# 乐观更新
+
+optimistic update
+    是什么 举例子：点赞 todo任务添加，数据在没有落库前，前端本地先行更新。页面避免阻塞
+    实现
+    react query 服务端状态管理库
+    useOptimistic+useTransition
+        useOptimistic_react hooksAPI快捷管理乐观更新状态, 成功会将乐观更新临时状态替换为真实状态，失败它会自动回退状态
+        useTransition  server actions中包含updateTag/revalidatePath会强制写后立即可读，客户端需要等待数据落库之后重新生成RSC组件，整个过程会阻塞页面交互。
+    zodstand
+
+
+# 水合
