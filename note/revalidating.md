@@ -27,12 +27,15 @@ revalidating (缓存何时更新/失效)
 # 乐观更新
 
 optimistic update
-    是什么 举例子：点赞 todo任务添加，数据在没有落库前，前端本地先行更新。页面避免阻塞
+    是什么 举例子：点赞 todo任务添加，数据在没有落库前，前端本地先行更新。
     实现
     react query 服务端状态管理库
     useOptimistic+useTransition
         useOptimistic_react hooksAPI快捷管理乐观更新状态, 成功会将乐观更新临时状态替换为真实状态，失败它会自动回退状态
-        useTransition  server actions中包含updateTag/revalidatePath会强制写后立即可读，客户端需要等待数据落库之后重新生成RSC组件，整个过程会阻塞页面交互。
+        useTransition server actions函数返回RSC组件(所有层级)，react进行对比与渲染会占用主线程较长时间，用户进行交互会受到阻塞。它可以给渲染标记为低优先级，用户交互优先响应 
+            并发渲染
+            fiber 架构
+    router.refresh 当前页面所对于服务端组件全部重新渲染一遍并返回给客户端，客户端会进行数据覆盖操作 (它并不会清除掉缓存)
     zodstand
 
 

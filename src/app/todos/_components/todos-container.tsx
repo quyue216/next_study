@@ -70,6 +70,7 @@ export function TodosContainer({ initialTodos }: TodosContainerProps) {
       addOptimisticAction({ type: 'add', tempTodo })
       try {
         const newTodos = await createTodoClient(name)
+        
         if (newTodos) setDbTodos(newTodos)
       } catch (err) {
         console.error('添加失败:', err)

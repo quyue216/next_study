@@ -53,4 +53,3 @@ PPR（部分预渲染）。我会记住在运行 next build（打包）时，Nex
   部署架构 ( next.js与Vercel深度绑定，vercel部署next.js默认用serverless架构，use cache需要改为use cache remote )
     serverless = 无服务器（把运维外包给云平台，按需生灭）。
     Serverful = 有服务器 / 全服务器模式（开发者必须自己买机器、装系统、配网络）。
-  
