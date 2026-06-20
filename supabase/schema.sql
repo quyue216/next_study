@@ -6,18 +6,27 @@ CREATE TABLE IF NOT EXISTS todos (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 启用行级安全（后续接入认证时使用）
+-- 接入 auth 后新增：关联到 Supabase Auth 用户
+ALTER TABLE todos ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+
+-- 启用行级安全
 ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 
--- 匿名可读写策略（无认证时使用，后续接入 auth 后可删除）
-CREATE POLICY "Allow anonymous read" ON todos
-  FOR SELECT USING (true);
+-- 删除旧的匿名开放策略（如果存在）
+DROP POLICY IF EXISTS "Allow anonymous read" ON todos;
+DROP POLICY IF EXISTS "Allow anonymous insert" ON todos;
+DROP POLICY IF EXISTS "Allow anonymous update" ON todos;
+DROP POLICY IF EXISTS "Allow anonymous delete" ON todos;
 
-CREATE POLICY "Allow anonymous insert" ON todos
-  FOR INSERT WITH CHECK (true);
+-- 仅允许认证用户操作自己的数据
+CREATE POLICY "Allow authenticated select own todos" ON todos
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
-CREATE POLICY "Allow anonymous update" ON todos
-  FOR UPDATE USING (true);
+CREATE POLICY "Allow authenticated insert own todos" ON todos
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Allow anonymous delete" ON todos
-  FOR DELETE USING (true);
+CREATE POLICY "Allow authenticated update own todos" ON todos
+  FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow authenticated delete own todos" ON todos
+  FOR DELETE TO authenticated USING (auth.uid() = user_id);

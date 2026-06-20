@@ -1,46 +1,68 @@
 "use server"
 
-import { addTodo, setTodoCompleted, setAllTodoCompleted, deleteTodo, clearTodos } from "./_lib/todo-service"
-import { revalidatePath } from "next/cache"
+import { createServerClient } from "@/lib/supabase.server";
+import {
+  addTodo,
+  setTodoCompleted,
+  setAllTodoCompleted,
+  deleteTodo,
+  clearTodos,
+} from "./_lib/todo-service";
+import { revalidatePath } from "next/cache";
+
+async function getCurrentUser() {
+  const supabase = await createServerClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user;
+}
 
 export async function createTodo(formData: FormData) {
-  console.log("[createTodo] Called with:", Object.fromEntries(formData))
-  const name = formData.get("name") as string
-  if (!name?.trim()) {
-    console.log("[createTodo] Empty name, returning")
-    return
-  }
-  await addTodo(name.trim())
-  console.log("[createTodo] Revalidating /todos")
-  revalidatePath("/todos")
-}
-//方法 命名标识给客户端使用还是服务端
-export async function createTodoClient(name: string) {
-  if (!name?.trim()) return
-  await addTodo(name.trim())
-  // revalidatePath("/todos")
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const name = formData.get("name") as string;
+  if (!name?.trim()) return;
+
+  await addTodo(user.id, name.trim());
+  revalidatePath("/todos");
 }
 
+export async function createTodoClient(name: string) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  if (!name?.trim()) return;
+
+  return addTodo(user.id, name.trim());
+}
 
 export async function toggleTodoState(id: string, completed: boolean) {
-  if (!id) return;
-  await setTodoCompleted(id,completed)
-  revalidatePath('/todos')
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await setTodoCompleted(user.id, id, completed);
+  revalidatePath("/todos");
 }
 
 export async function setAllTodosCompleted(completed: boolean) {
-  await setAllTodoCompleted(completed)
-  revalidatePath('/todos')
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await setAllTodoCompleted(user.id, completed);
+  revalidatePath("/todos");
 }
 
 export async function removeTodo(id: string) {
-  if (!id) return
-  await deleteTodo(id)
-  revalidatePath('/todos')
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await deleteTodo(user.id, id);
+  revalidatePath("/todos");
 }
 
 export async function removeAllTodos() {
-  await clearTodos()
-  revalidatePath('/todos')
-}
+  const user = await getCurrentUser();
+  if (!user) return;
 
+  await clearTodos(user.id);
+  revalidatePath("/todos");
+}

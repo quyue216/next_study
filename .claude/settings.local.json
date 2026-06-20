@@ -48,7 +48,13 @@
       "Bash(/c/Users/quyue/AppData/Local/Volta/tools/image/node/22.22.0/node_modules/openclaw/openclaw *)",
       "Bash(node /c/Users/quyue/AppData/Local/Volta/tools/image/node/22.22.0/node_modules/openclaw/dist/index.js --version)",
       "Bash(ANTHROPIC_API_KEY=\"ark-960dbf94-6d7d-48f4-9fc6-bd0e39418e6b-e903d\" ANTHROPIC_BASE_URL=\"https://ark.cn-beijing.volces.com/api/coding\" openclaw models *)",
-      "WebFetch(domain:www.volcengine.com)"
+      "WebFetch(domain:www.volcengine.com)",
+      "Bash(tasklist)",
+      "Bash(cmd //c \"taskkill /F /PID 15500\")",
+      "mcp__chrome-devtools__fill_form",
+      "mcp__supabase__list_tables",
+      "Bash(node *)",
+      "Bash(taskkill *)"
     ]
   },
   "enableAllProjectMcpServers": true,
