@@ -48,9 +48,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// 匹配所有路由，排除静态资源
+// 匹配所有路由，排除 Next.js 内部路径与静态资源
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|json)$).*)",
   ],
 };

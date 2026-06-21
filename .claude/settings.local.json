@@ -54,7 +54,10 @@
       "mcp__chrome-devtools__fill_form",
       "mcp__supabase__list_tables",
       "Bash(node *)",
-      "Bash(taskkill *)"
+      "Bash(taskkill *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(timeout *)"
     ]
   },
   "enableAllProjectMcpServers": true,

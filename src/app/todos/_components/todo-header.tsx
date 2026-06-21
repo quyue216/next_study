@@ -19,14 +19,6 @@ export function TodoHeader({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">任务列表</h1>
         <div className="flex items-center gap-3">
-          {/* 测试按钮 */}
-          <button
-            onClick={() => alert('测试按钮被点击了！')}
-            className="px-3 py-1 bg-green-500 text-white rounded"
-          >
-            点我测试
-          </button>
-
           {isMounted && user && (
             <span className="text-sm text-muted-foreground">{user.email}</span>
           )}
