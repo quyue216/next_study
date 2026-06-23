@@ -27,6 +27,7 @@ const registerSchema = z
     email: z.string().email("请输入有效邮箱"),
     password: z.string().min(6, "密码至少 6 位"),
     confirmPassword: z.string().min(1, "请确认密码"),
+    nickname: z.string().min(2, "昵称至少 2 位").max(20, "昵称最多 20 位"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "两次密码输入不一致",
@@ -56,7 +57,7 @@ export function AuthForm() {
 
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", confirmPassword: "" },
+    defaultValues: { email: "", password: "", confirmPassword: "", nickname: "" },
   });
 
   async function handleLogin(data: LoginForm) {
@@ -80,6 +81,7 @@ export function AuthForm() {
     const formData = new FormData();
     formData.append("email", data.email);
     formData.append("password", data.password);
+    formData.append("nickname", data.nickname);
 
     const result = await registerAction({}, formData);
     setRegisterState(result);
@@ -163,6 +165,16 @@ export function AuthForm() {
                   {...registerForm.register("email")}
                 />
                 <ErrorText message={registerState.fieldErrors?.email} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-nickname">昵称</Label>
+                <Input
+                  id="register-nickname"
+                  type="text"
+                  placeholder="取个名字"
+                  {...registerForm.register("nickname")}
+                />
+                <ErrorText message={registerForm.formState.errors.nickname?.message ?? registerState.fieldErrors?.nickname} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="register-password">密码</Label>
