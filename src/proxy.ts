@@ -14,12 +14,18 @@ export async function proxy(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
+        /* 
+          任何时候 session 变了（登录、刷新、登出、手动改），setAll 都会执行，用来同步更新浏览器保存的cookie。
+        
+        */
         setAll(cookiesToSet) {
+              // 第一次：把新 token 写到当前这张"小纸条"上
           cookiesToSet.forEach(({ name, value }) => {
-            request.cookies.set(name, value);
+            // request.cookies.set(name, value);
           });
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => {
+           //第二次：让浏览器把新 tok n 保存下来，下次访问还能用
             response.cookies.set(name, value, options);
           });
         },

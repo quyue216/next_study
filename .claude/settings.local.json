@@ -57,7 +57,8 @@
       "Bash(taskkill *)",
       "Bash(netstat -ano)",
       "Bash(findstr :3000)",
-      "Bash(timeout *)"
+      "Bash(timeout *)",
+      "Bash(npx shadcn *)"
     ]
   },
   "enableAllProjectMcpServers": true,

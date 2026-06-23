@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-import { loginAction, registerAction, type AuthState } from "@/app/auth/actions";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -11,85 +12,188 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { loginAction, registerAction, type AuthState } from "@/app/auth/actions";
 
-const initialState: AuthState = {};
+const loginSchema = z.object({
+  email: z.string().email("请输入有效邮箱"),
+  password: z.string().min(6, "密码至少 6 位"),
+});
 
-function AuthMessage({ state }: { state: AuthState }) {
-  if (state.error) {
-    return <p className="text-sm text-destructive">{state.error}</p>;
-  }
-  if (state.success) {
-    return <p className="text-sm text-green-600">{state.success}</p>;
-  }
-  return null;
+const registerSchema = z
+  .object({
+    email: z.string().email("请输入有效邮箱"),
+    password: z.string().min(6, "密码至少 6 位"),
+    confirmPassword: z.string().min(1, "请确认密码"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "两次密码输入不一致",
+    path: ["confirmPassword"],
+  });
+
+type LoginForm = z.infer<typeof loginSchema>;
+type RegisterForm = z.infer<typeof registerSchema>;
+
+function ErrorText({ message }: { message?: string }) {
+  return message ? (
+    <p className="text-sm text-destructive min-h-[20px]">{message}</p>
+  ) : (
+    <p className="min-h-[20px]" />
+  );
 }
 
 export function AuthForm() {
-  const [loginState, loginActionDispatch, loginPending] = useActionState(
-    loginAction,
-    initialState
-  );
-  const [registerState, registerActionDispatch, registerPending] = useActionState(
-    registerAction,
-    initialState
-  );
+  const [activeTab, setActiveTab] = useState("login");
+  const [loginState, setLoginState] = useState<AuthState>({});
+  const [registerState, setRegisterState] = useState<AuthState>({});
+
+  const loginForm = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "10676114@qq.com", password: "current520" },
+  });
+
+  const registerForm = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { email: "", password: "", confirmPassword: "" },
+  });
+
+  async function handleLogin(data: LoginForm) {
+    const formData = new FormData();
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+
+    const result = await loginAction({}, formData);
+    setLoginState(result);
+
+    // 如果服务端返回字段错误，同步到 react-hook-form
+    if (result.fieldErrors) {
+      loginForm.setError("email", { message: result.fieldErrors.email ?? "" });
+      loginForm.setError("password", {
+        message: result.fieldErrors.password ?? "",
+      });
+    }
+  }
+
+  async function handleRegister(data: RegisterForm) {
+    const formData = new FormData();
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+
+    const result = await registerAction({}, formData);
+    setRegisterState(result);
+
+    if (result.success) {
+      registerForm.reset();
+      setTimeout(() => setActiveTab("login"), 1500);
+    }
+  }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>欢迎使用</CardTitle>
-        <CardDescription>登录或注册以管理任务</CardDescription>
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">欢迎使用</CardTitle>
+        <CardDescription>请登录或注册您的账户</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="login" className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value);
+            loginForm.reset();
+            registerForm.reset();
+            setLoginState({});
+            setRegisterState({});
+          }}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">登录</TabsTrigger>
             <TabsTrigger value="register">注册</TabsTrigger>
           </TabsList>
-          <TabsContent value="login" className="mt-4">
-            <form action={loginActionDispatch} className="flex flex-col gap-4">
-              <Input
-                name="email"
-                type="email"
-                placeholder="邮箱"
-                required
-                autoComplete="email"
-              />
-              <Input
-                name="password"
-                type="password"
-                placeholder="密码"
-                required
-                minLength={6}
-                autoComplete="current-password"
-              />
-              <AuthMessage state={loginState} />
-              <Button type="submit" disabled={loginPending} className="w-full">
-                {loginPending ? "登录中..." : "登录"}
+
+          <TabsContent value="login">
+            <form
+              onSubmit={loginForm.handleSubmit(handleLogin)}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="login-email">邮箱</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  {...loginForm.register("email")}
+                />
+                <ErrorText message={loginState.fieldErrors?.email} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="login-password">密码</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  {...loginForm.register("password")}
+                />
+                <ErrorText message={loginState.fieldErrors?.password} />
+              </div>
+              {loginState.error && (
+                <p className="text-sm text-destructive">{loginState.error}</p>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loginForm.formState.isSubmitting}
+              >
+                {loginForm.formState.isSubmitting ? "登录中..." : "登录"}
               </Button>
             </form>
           </TabsContent>
-          <TabsContent value="register" className="mt-4">
-            <form action={registerActionDispatch} className="flex flex-col gap-4">
-              <Input
-                name="email"
-                type="email"
-                placeholder="邮箱"
-                required
-                autoComplete="email"
-              />
-              <Input
-                name="password"
-                type="password"
-                placeholder="密码"
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-              <AuthMessage state={registerState} />
-              <Button type="submit" disabled={registerPending} className="w-full">
-                {registerPending ? "注册中..." : "注册"}
+
+          <TabsContent value="register">
+            <form
+              onSubmit={registerForm.handleSubmit(handleRegister)}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="register-email">邮箱</Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  {...registerForm.register("email")}
+                />
+                <ErrorText message={registerState.fieldErrors?.email} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-password">密码</Label>
+                <Input
+                  id="register-password"
+                  type="password"
+                  {...registerForm.register("password")}
+                />
+                <ErrorText message={registerState.fieldErrors?.password} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-confirm-password">确认密码</Label>
+                <Input
+                  id="register-confirm-password"
+                  type="password"
+                  {...registerForm.register("confirmPassword")}
+                />
+                <ErrorText message={registerForm.formState.errors.confirmPassword?.message} />
+              </div>
+              {registerState.error && (
+                <p className="text-sm text-destructive">{registerState.error}</p>
+              )}
+              {registerState.success && (
+                <p className="text-sm text-green-600">{registerState.success}</p>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={registerForm.formState.isSubmitting}
+              >
+                {registerForm.formState.isSubmitting ? "注册中..." : "注册"}
               </Button>
             </form>
           </TabsContent>
@@ -97,4 +201,7 @@ export function AuthForm() {
       </CardContent>
     </Card>
   );
+
+
+
 }

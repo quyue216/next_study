@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth-store";
 import { logoutAction } from "@/app/auth/actions";
 
-export function TodoHeader({ children }: { children: React.ReactNode }) {
-  const user = useAuthStore((state) => state.user);
-  const [isMounted, setIsMounted] = useState(false);
-
-  // 水合修复：只在客户端挂载后显示用户信息
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
+export function TodoHeader({
+  email,
+  children,
+}: {
+  email?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">任务列表</h1>
         <div className="flex items-center gap-3">
-          {isMounted && user && (
-            <span className="text-sm text-muted-foreground">{user.email}</span>
+          {email && (
+            <span className="text-sm text-muted-foreground">{email}</span>
           )}
           <form action={logoutAction}>
             <Button type="submit" variant="outline" size="sm">

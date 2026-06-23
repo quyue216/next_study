@@ -24,9 +24,10 @@ type OptimisticAction =
 
 interface TodosContainerProps {
   initialTodos: Todo[]
+  userEmail?: string
 }
 
-export function TodosContainer({ initialTodos }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
 
@@ -130,7 +131,7 @@ export function TodosContainer({ initialTodos }: TodosContainerProps) {
 
   return (
     <div className="space-y-4">
-      <TodoHeader>
+      <TodoHeader email={userEmail}>
         <AddTodoInput onAdd={handleAdd} isPending={isPending} />
       </TodoHeader>
 

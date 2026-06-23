@@ -15,7 +15,7 @@ export default async function Todos() {
 
   return (
     <div className="mx-auto min-w-3xl p-8">
-      <TodosContainer initialTodos={todos} />
+      <TodosContainer initialTodos={todos} userEmail={data.user.email} />
     </div>
   );
 }
