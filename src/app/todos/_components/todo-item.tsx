@@ -52,7 +52,7 @@ export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps)
               onToggle(todo.id, checked as boolean)
             }}
           />
-          <label htmlFor={checkboxId} className="text-sm text-muted-foreground cursor-pointer">
+          <label htmlFor={checkboxId} className={`text-sm text-muted-foreground ${isPending ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
             {todo.completed ? "已完成" : "未完成"}
           </label>
         </div>
