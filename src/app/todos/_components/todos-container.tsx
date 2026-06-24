@@ -13,6 +13,7 @@ import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
 import { TodoFooter } from './todo-footer'
 import { AddTodoInput } from './add-todo-input'
+import { PaginationOptimized, type PaginationProps } from '@/components/pagination-optimized'
 import { cn } from '@/lib/utils'
 
 type OptimisticAction =
@@ -25,9 +26,10 @@ type OptimisticAction =
 interface TodosContainerProps {
   initialTodos: Todo[]
   userEmail?: string
+  pagination?: PaginationProps
 }
 
-export function TodosContainer({ initialTodos, userEmail }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail, pagination }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
 
@@ -70,9 +72,8 @@ export function TodosContainer({ initialTodos, userEmail }: TodosContainerProps)
     startTransition(async () => {
       addOptimisticAction({ type: 'add', tempTodo })
       try {
-        const newTodos = await createTodoClient(name)
-        
-        if (newTodos) setDbTodos(newTodos)
+        await createTodoClient(name)
+        // createTodoClient 内部已经调用了 revalidatePath，会自动刷新
       } catch (err) {
         console.error('添加失败:', err)
       }
@@ -148,6 +149,16 @@ export function TodosContainer({ initialTodos, userEmail }: TodosContainerProps)
         onClear={handleClear}
         isPending={isPending}
       />
+
+      {/* 服务端分页器 */}
+      {pagination && pagination.total > 0 && (
+        <PaginationOptimized
+          total={pagination.total}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalPages={pagination.totalPages}
+        />
+      )}
 
       {/* 同步中全局指示器 */}
       {isPending && (

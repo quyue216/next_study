@@ -32,7 +32,8 @@ export async function createTodoClient(name: string) {
   if (!user) return;
   if (!name?.trim()) return;
 
-  return addTodo(user.id, name.trim());
+  await addTodo(user.id, name.trim());
+  revalidatePath("/todos");
 }
 
 export async function toggleTodoState(id: string, completed: boolean) {

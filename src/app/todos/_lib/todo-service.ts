@@ -31,6 +31,63 @@ export async function getTodos(userId: string): Promise<Todo[]> {
   return (data ?? []).map(mapRow)
 }
 
+export interface PaginatedResult<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export async function getTodosPaginated(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<PaginatedResult<Todo>> {
+  const supabase = await createServerClient()
+
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from("todos")
+    .select("*", { count: "exact" })
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(from, to)
+
+  if (error) {
+    console.error("[getTodosPaginated] Error:", error)
+    throw error
+  }
+
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / pageSize)
+
+  return {
+    data: (data ?? []).map(mapRow),
+    total,
+    page,
+    pageSize,
+    totalPages,
+  }
+}
+
+export async function getTodosCount(userId: string): Promise<number> {
+  const supabase = await createServerClient()
+  const { count, error } = await supabase
+    .from("todos")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+
+  if (error) {
+    console.error("[getTodosCount] Error:", error)
+    throw error
+  }
+
+  return count ?? 0
+}
+
 export async function getTodoById(userId: string, id: string): Promise<Todo | undefined> {
   const supabase = await createServerClient()
   const { data, error } = await supabase
