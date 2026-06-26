@@ -73,7 +73,7 @@ export function TodosContainer({ initialTodos, userEmail, pagination }: TodosCon
       addOptimisticAction({ type: 'add', tempTodo })
       try {
         await createTodoClient(name)
-        // createTodoClient 内部已经调用了 revalidatePath，会自动刷新
+        // createTodoClient 内部已经调用了 revalidatePath(它会强制作废缓存)，会自动显示最新数据
       } catch (err) {
         console.error('添加失败:', err)
       }

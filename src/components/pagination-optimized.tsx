@@ -81,6 +81,88 @@ export function PaginationOptimized({
   const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1
   const endItem = Math.min(page * pageSize, total)
 
+  function renderPageNumbers() {
+    const pages: React.ReactNode[] = []
+    const maxVisible = 5
+
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+
+    // 调整起始页，确保显示足够的页码
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1)
+    }
+
+    // 显示第一页和省略号
+    if (startPage > 1) {
+      pages.push(
+        <Button
+          key={1}
+          variant={page === 1 ? "default" : "ghost"}
+          size="sm"
+          onClick={() => handlePageChange(1)}
+          disabled={isPending}
+        >
+          1
+        </Button>
+      )
+      if (startPage > 2) {
+        pages.push(
+          <span key="ellipsis1" className="px-1 text-muted-foreground">
+            ...
+          </span>
+        )
+      }
+    }
+
+    // 显示中间页码
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <Button
+          key={i}
+          variant={i === page ? "default" : "ghost"}
+          size="sm"
+          onClick={() => handlePageChange(i)}
+          disabled={isPending}
+        >
+          {isPending && i === page ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            i
+          )}
+        </Button>
+      )
+    }
+
+    // 显示最后一页和省略号
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pages.push(
+          <span key="ellipsis2" className="px-1 text-muted-foreground">
+            ...
+          </span>
+        )
+      }
+      pages.push(
+        <Button
+          key={totalPages}
+          variant={page === totalPages ? "default" : "ghost"}
+          size="sm"
+          onClick={() => handlePageChange(totalPages)}
+          disabled={isPending}
+        >
+          {isPending && page === totalPages ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            totalPages
+          )}
+        </Button>
+      )
+    }
+
+    return pages
+  }
+
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
       {/* 页码信息 */}
@@ -170,248 +252,4 @@ export function PaginationOptimized({
       </div>
     </div>
   )
-
-  function renderPageNumbers() {
-    console.log(`🚀 ~ renderPageNumbers ~ function renderPageNumbers() {
-    const pages: React.ReactNode[] = []
-    const maxVisible = 5
-
-    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
-
-    // 调整起始页，确保显示足够的页码
-    if (endPage - startPage + 1 < maxVisible) {
-      startPage = Math.max(1, endPage - maxVisible + 1)
-    }
-
-    // 显示第一页和省略号
-    if (startPage > 1) {
-      pages.push(
-        <Button
-          key={1}
-          variant={page === 1 ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(1)}
-          disabled={isPending}
-        >
-          1
-        </Button>
-      )
-      if (startPage > 2) {
-        pages.push(
-          <span key="ellipsis1" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-    }
-
-    // 显示中间页码
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <Button
-          key={i}
-          variant={i === page ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(i)}
-          disabled={isPending}
-        >
-          {isPending && i === page ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            i
-          )}
-        </Button>
-      )
-    }
-
-    // 显示最后一页和省略号
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pages.push(
-          <span key="ellipsis2" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-      pages.push(
-        <Button
-          key={totalPages}
-          variant={page === totalPages ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(totalPages)}
-          disabled={isPending}
-        >
-          {isPending && page === totalPages ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            totalPages
-          )}
-        </Button>
-      )
-    }
-
-    return pages
-  }:`, function renderPageNumbers() {
-    const pages: React.ReactNode[] = []
-    const maxVisible = 5
-
-    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
-
-    // 调整起始页，确保显示足够的页码
-    if (endPage - startPage + 1 < maxVisible) {
-      startPage = Math.max(1, endPage - maxVisible + 1)
-    }
-
-    // 显示第一页和省略号
-    if (startPage > 1) {
-      pages.push(
-        <Button
-          key={1}
-          variant={page === 1 ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(1)}
-          disabled={isPending}
-        >
-          1
-        </Button>
-      )
-      if (startPage > 2) {
-        pages.push(
-          <span key="ellipsis1" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-    }
-
-    // 显示中间页码
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <Button
-          key={i}
-          variant={i === page ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(i)}
-          disabled={isPending}
-        >
-          {isPending && i === page ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            i
-          )}
-        </Button>
-      )
-    }
-
-    // 显示最后一页和省略号
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pages.push(
-          <span key="ellipsis2" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-      pages.push(
-        <Button
-          key={totalPages}
-          variant={page === totalPages ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(totalPages)}
-          disabled={isPending}
-        >
-          {isPending && page === totalPages ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            totalPages
-          )}
-        </Button>
-      )
-    }
-
-    return pages
-  })
-    const pages: React.ReactNode[] = []
-    const maxVisible = 5
-
-    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
-
-    // 调整起始页，确保显示足够的页码
-    if (endPage - startPage + 1 < maxVisible) {
-      startPage = Math.max(1, endPage - maxVisible + 1)
-    }
-
-    // 显示第一页和省略号
-    if (startPage > 1) {
-      pages.push(
-        <Button
-          key={1}
-          variant={page === 1 ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(1)}
-          disabled={isPending}
-        >
-          1
-        </Button>
-      )
-      if (startPage > 2) {
-        pages.push(
-          <span key="ellipsis1" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-    }
-
-    // 显示中间页码
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
-        <Button
-          key={i}
-          variant={i === page ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(i)}
-          disabled={isPending}
-        >
-          {isPending && i === page ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            i
-          )}
-        </Button>
-      )
-    }
-
-    // 显示最后一页和省略号
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pages.push(
-          <span key="ellipsis2" className="px-1 text-muted-foreground">
-            ...
-          </span>
-        )
-      }
-      pages.push(
-        <Button
-          key={totalPages}
-          variant={page === totalPages ? "default" : "ghost"}
-          size="sm"
-          onClick={() => handlePageChange(totalPages)}
-          disabled={isPending}
-        >
-          {isPending && page === totalPages ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            totalPages
-          )}
-        </Button>
-      )
-    }
-
-    return pages
-  }
 }
-

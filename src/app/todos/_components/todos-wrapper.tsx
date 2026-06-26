@@ -19,6 +19,7 @@ interface TodosWrapperProps {
 
 export function TodosWrapper({ initialTodos, userEmail, pagination: initialPagination }: TodosWrapperProps) {
   const searchParams = useSearchParams()
+  console.log("🚀 ~ TodosWrapper ~ searchParams:", searchParams)
   const [isLoading, setIsLoading] = useState(false)
   const [prevKey, setPrevKey] = useState("")
 
@@ -29,7 +30,7 @@ export function TodosWrapper({ initialTodos, userEmail, pagination: initialPagin
     if (prevKey && prevKey !== currentKey) {
       setIsLoading(true)
       // 模拟 loading 延迟，实际项目中这个时间会被真实数据加载占用
-      const timer = setTimeout(() => setIsLoading(false), 500)
+      const timer = setTimeout(() => setIsLoading(false), 0)
       return () => clearTimeout(timer)
     }
     setPrevKey(currentKey)
