@@ -27,9 +27,10 @@ interface TodosContainerProps {
   initialTodos: Todo[]
   userEmail?: string
   pagination?: PaginationProps
+  isLoading?: boolean // 新增：接收 loading 状态
 }
 
-export function TodosContainer({ initialTodos, userEmail, pagination }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail, pagination, isLoading = false }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
 
@@ -141,6 +142,7 @@ export function TodosContainer({ initialTodos, userEmail, pagination }: TodosCon
         onToggle={handleToggle}
         onDelete={handleDelete}
         isPending={isPending}
+        isLoading={isLoading} // 传递 loading 状态
       />
 
       <TodoFooter
