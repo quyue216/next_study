@@ -56,7 +56,7 @@ export function PaginationOptimized({
       // 立即乐观更新 UI
       setOptimisticState({ page: newPage, pageSize: targetPageSize })
 
-      // 然后更新 URL
+      // 然后更新 URL，保留 search 参数
       const params = new URLSearchParams(searchParams)
       params.set("page", newPage.toString())
       if (newPageSize) {

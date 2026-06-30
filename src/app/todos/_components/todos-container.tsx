@@ -14,6 +14,10 @@ import { TodoList } from './todo-list'
 import { TodoFooter } from './todo-footer'
 import { AddTodoInput } from './add-todo-input'
 import { PaginationOptimized, type PaginationProps } from '@/components/pagination-optimized'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Search, X } from 'lucide-react' //图标库
+import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 type OptimisticAction =
@@ -26,13 +30,17 @@ type OptimisticAction =
 interface TodosContainerProps {
   initialTodos: Todo[]
   userEmail?: string
+  search?: string
   pagination?: PaginationProps
   isLoading?: boolean // 新增：接收 loading 状态
 }
 
-export function TodosContainer({ initialTodos, userEmail, pagination, isLoading = false }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail, search: initialSearch, pagination, isLoading = false }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [searchInput, setSearchInput] = useState(initialSearch || '')
 
   // 服务端传入新的 initialTodos 时同步更新真实状态
   useEffect(() => {
@@ -131,10 +139,62 @@ export function TodosContainer({ initialTodos, userEmail, pagination, isLoading 
     })
   }
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    startTransition(() => {
+      const params = new URLSearchParams(searchParams)
+      if (searchInput.trim()) {
+        params.set('search', searchInput.trim())
+        params.delete('page') // 搜索时重置到第一页
+      } else {
+        params.delete('search')
+        params.delete('page')
+      }
+      router.push(`?${params.toString()}`)
+    })
+  }
+
+  const handleClearSearch = () => {
+    startTransition(() => {
+      setSearchInput('')
+      const params = new URLSearchParams(searchParams)
+      params.delete('search')
+      params.delete('page')
+      router.push(`?${params.toString()}`)
+    })
+  }
+
   return (
     <div className="space-y-4">
       <TodoHeader email={userEmail}>
-        <AddTodoInput onAdd={handleAdd} isPending={isPending} />
+        <div className="space-y-3">
+          <AddTodoInput onAdd={handleAdd} isPending={isPending} />
+          {/* 搜索框 */}
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="搜索任务..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+            <Button type="submit" disabled={isPending}>
+              搜索
+            </Button>
+          </form>
+        </div>
       </TodoHeader>
 
       <TodoList

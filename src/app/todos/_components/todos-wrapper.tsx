@@ -8,6 +8,7 @@ import { type Todo, type PaginatedResult } from "../_lib/todo-service"
 interface TodosWrapperProps {
   initialTodos: Todo[]
   userEmail?: string
+  search?: string
   pagination: {
     total: number
     page: number
@@ -16,13 +17,13 @@ interface TodosWrapperProps {
   }
 }
 
-export function TodosWrapper({ initialTodos, userEmail, pagination: initialPagination }: TodosWrapperProps) {
+export function TodosWrapper({ initialTodos, userEmail, search, pagination: initialPagination }: TodosWrapperProps) {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [prevKey, setPrevKey] = useState("")
 
   // 当 URL 参数变化时，显示 loading 状态
-  const currentKey = `${searchParams.get("page")}-${searchParams.get("pageSize")}`
+  const currentKey = `${searchParams.get("page")}-${searchParams.get("pageSize")}-${searchParams.get("search")}`
 
   useEffect(() => {
     if (prevKey && prevKey !== currentKey) {
@@ -38,6 +39,7 @@ export function TodosWrapper({ initialTodos, userEmail, pagination: initialPagin
     <TodosContainer
       initialTodos={initialTodos}
       userEmail={userEmail}
+      search={search}
       pagination={initialPagination}
       isLoading={isLoading} // 传递 loading 状态
     />

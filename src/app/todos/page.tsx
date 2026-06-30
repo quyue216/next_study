@@ -7,6 +7,7 @@ interface PageProps {
   searchParams?: Promise<{
     page?: string
     pageSize?: string
+    search?: string
   }>
 }
 
@@ -21,14 +22,16 @@ export default async function Todos({ searchParams }: PageProps) {
   const params = await searchParams
   const page = params?.page ? parseInt(params.page, 10) : 1
   const pageSize = params?.pageSize ? parseInt(params.pageSize, 10) : 10
+  const search = params?.search || undefined
 
-  const paginatedTodos = await getTodosPaginated(data.user.id, page, pageSize);
+  const paginatedTodos = await getTodosPaginated(data.user.id, page, pageSize, search);
 
   return (
     <div className="mx-auto min-w-3xl p-8">
       <TodosWrapper
         initialTodos={paginatedTodos.data}
         userEmail={data.user.email}
+        search={search}
         pagination={{
           total: paginatedTodos.total,
           page: paginatedTodos.page,

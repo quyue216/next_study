@@ -42,17 +42,24 @@ export interface PaginatedResult<T> {
 export async function getTodosPaginated(
   userId: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  search?: string
 ): Promise<PaginatedResult<Todo>> {
   const supabase = await createServerClient()
 
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("todos")
     .select("*", { count: "exact" })
     .eq("user_id", userId)
+
+  if (search) {
+    query = query.ilike("name", `%${search}%`)
+  }
+
+  const { data, error, count } = await query
     .order("created_at", { ascending: false })
     .range(from, to)
 
