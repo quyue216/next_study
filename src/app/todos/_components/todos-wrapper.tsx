@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { TodosContainer } from "./todos-container"
-import { TodoListLoading } from "./todo-list-loading"
 import { type Todo, type PaginatedResult } from "../_lib/todo-service"
 
 interface TodosWrapperProps {
@@ -35,21 +34,12 @@ export function TodosWrapper({ initialTodos, userEmail, pagination: initialPagin
     setPrevKey(currentKey)
   }, [currentKey, prevKey])
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-12" /> {/* Placeholder for header */}
-        <TodoListLoading />
-        <div className="h-24" /> {/* Placeholder for footer and pagination */}
-      </div>
-    )
-  }
-
   return (
     <TodosContainer
       initialTodos={initialTodos}
       userEmail={userEmail}
       pagination={initialPagination}
+      isLoading={isLoading} // 传递 loading 状态
     />
   )
 }

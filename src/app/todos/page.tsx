@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase.server";
-import { TodosContainer } from "./_components/todos-container";
+import { TodosWrapper } from "./_components/todos-wrapper";
 import { getTodosPaginated, type PaginatedResult, type Todo } from "./_lib/todo-service";
 
 interface PageProps {
@@ -26,7 +26,7 @@ export default async function Todos({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto min-w-3xl p-8">
-      <TodosContainer
+      <TodosWrapper
         initialTodos={paginatedTodos.data}
         userEmail={data.user.email}
         pagination={{
