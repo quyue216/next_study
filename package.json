@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "link-next": "ln -s \"E:\\qy-task\\2026\\person\\学习\\next\" next || true",
+    "unlink-next": "rm -f next || true"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",

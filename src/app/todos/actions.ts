@@ -7,6 +7,12 @@ import {
   setAllTodoCompleted,
   deleteTodo,
   clearTodos,
+  updateTodo,
+  Priority,
+  CreateTodoData,
+  addSubTask,
+  updateSubTask,
+  deleteSubTask,
 } from "./_lib/todo-service";
 import { revalidatePath } from "next/cache";
 
@@ -36,11 +42,36 @@ export async function createTodoClient(name: string) {
   revalidatePath("/todos");
 }
 
+export async function createTodoWithDetails(data: CreateTodoData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  if (!data.name?.trim()) return;
+
+  await addTodo(user.id, data);
+  revalidatePath("/todos"); //强制props更新
+}
+
 export async function toggleTodoState(id: string, completed: boolean) {
   const user = await getCurrentUser();
   if (!user || !id) return;
 
   await setTodoCompleted(user.id, id, completed);
+  revalidatePath("/todos");
+}
+
+export async function updateTodoDetails(
+  id: string,
+  updates: {
+    name?: string
+    priority?: Priority
+    dueDate?: string
+    tags?: string[]
+  }
+) {
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await updateTodo(user.id, id, updates);
   revalidatePath("/todos");
 }
 
@@ -67,3 +98,29 @@ export async function removeAllTodos() {
   await clearTodos(user.id);
   revalidatePath("/todos");
 }
+
+// ========== SubTasks ==========
+export async function createSubTask(todoId: string, name: string) {
+  const user = await getCurrentUser();
+  if (!user || !todoId || !name?.trim()) return;
+
+  await addSubTask(todoId, name.trim());
+  revalidatePath("/todos");
+}
+
+export async function updateSubTaskState(subTaskId: string, name?: string, completed?: boolean) {
+  const user = await getCurrentUser();
+  if (!user || !subTaskId) return;
+
+  await updateSubTask(subTaskId, { name, completed });
+  revalidatePath("/todos");
+}
+
+export async function removeSubTask(subTaskId: string) {
+  const user = await getCurrentUser();
+  if (!user || !subTaskId) return;
+
+  await deleteSubTask(subTaskId);
+  revalidatePath("/todos");
+}
+

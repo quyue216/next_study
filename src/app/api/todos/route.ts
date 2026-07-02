@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase.server'
+import {
+  getTodosPaginated,
+  getTodosByTag,
+  getTagsByUser,
+  CreateTodoData,
+  addTodo,
+  Todo,
+  updateTodo,
+  deleteTodo,
+  Priority
+} from '@/app/todos/_lib/todo-service'
+import { revalidatePath } from 'next/cache'
+
+async function getCurrentUser(request: NextRequest) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser(request)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const searchParams = request.nextUrl.searchParams
+  const action = searchParams.get('action')
+
+  try {
+    if (action === 'tags') {  //C端用户自定义标签，每个用户标签都不大相同
+      const tags = await getTagsByUser(user.id)
+      return NextResponse.json({ tags })
+    }
+
+    if (action === 'byTag') {
+      const tag = searchParams.get('tag')
+      if (!tag) {
+        return NextResponse.json({ error: 'Tag is required' }, { status: 400 })
+      }
+      const todos = await getTodosByTag(user.id, tag)
+      return NextResponse.json({ todos })
+    }
+
+    const page = parseInt(searchParams.get('page') || '1')
+    const pageSize = parseInt(searchParams.get('pageSize') || '10')
+    const search = searchParams.get('search') || undefined
+    const tag = searchParams.get('filterTag') || undefined
+
+    const result = await getTodosPaginated(user.id, page, pageSize, search)
+
+    if (tag) {
+      const filteredData = result.data.filter(todo =>
+        todo.tags && todo.tags.includes(tag)
+      )
+      return NextResponse.json({
+        ...result,
+        data: filteredData,
+        total: filteredData.length,
+        totalPages: Math.ceil(filteredData.length / pageSize)
+      })
+    }
+
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('[GET /api/todos] Error:', error)
+    return NextResponse.json({ error: 'Failed to fetch todos' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const user = await getCurrentUser(request)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const { name, priority, dueDate, tags } = body
+
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
+    const todoData: CreateTodoData = {
+      name: name.trim(),
+      priority: priority as Priority,
+      dueDate,
+      tags
+    }
+
+    await addTodo(user.id, todoData)
+    revalidatePath('/todos')
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('[POST /api/todos] Error:', error)
+    return NextResponse.json({ error: 'Failed to create todo' }, { status: 500 })
+  }
+}
