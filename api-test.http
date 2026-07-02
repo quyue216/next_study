@@ -1,0 +1,88 @@
+### Todo API 测试文件
+### 使用 VS Code "REST Client" 扩展运行
+### 安装: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+@baseUrl = http://localhost:3000/api
+
+### ==================== 待办事项接口 ====================
+
+### 1. 获取待办列表
+GET {{baseUrl}}/todos?page=1&pageSize=10
+
+### 2. 创建待办
+POST {{baseUrl}}/todos
+Content-Type: application/json
+
+{
+  "name": "测试任务 - 优先级高",
+  "priority": "high",
+  "dueDate": "2024-12-31T23:59:59Z",
+  "tags": ["测试", "重要"]
+}
+
+### 3. 获取所有标签
+GET {{baseUrl}}/todos?action=tags
+
+### 4. 按标签筛选
+GET {{baseUrl}}/todos?action=byTag&tag=测试
+
+### 5. 搜索待办
+GET {{baseUrl}}/todos?search=测试
+
+### ==================== 单个待办操作 (需要替换 {id}) ====================
+
+### 6. 更新待办 (先从上面的响应中复制 id)
+# PATCH {{baseUrl}}/todos/{todo-id}
+# Content-Type: application/json
+#
+# {
+#   "name": "更新后的测试任务",
+#   "completed": false,
+#   "priority": "medium",
+#   "tags": ["测试", "已更新"]
+# }
+
+### 7. 删除待办
+# DELETE {{baseUrl}}/todos/{todo-id}
+
+### ==================== 子任务接口 ====================
+
+### 8. 获取子任务
+# GET {{baseUrl}}/todos/{todo-id}/subtasks
+
+### 9. 获取子任务进度
+# GET {{baseUrl}}/todos/{todo-id}/subtasks?action=progress
+
+### 10. 创建子任务
+# POST {{baseUrl}}/todos/{todo-id}/subtasks
+# Content-Type: application/json
+#
+# {
+#   "name": "子任务 1"
+# }
+
+### 11. 更新子任务
+# PATCH {{baseUrl}}/subtasks/{subtask-id}
+# Content-Type: application/json
+#
+# {
+#   "name": "更新后的子任务",
+#   "completed": true
+# }
+
+### 12. 删除子任务
+# DELETE {{baseUrl}}/subtasks/{subtask-id}
+
+### ==================== 附件接口 ====================
+
+### 13. 获取附件列表
+# GET {{baseUrl}}/todos/{todo-id}/attachments
+
+### 14. 上传附件 (需要使用 form-data，建议用 Postman 或前端测试)
+# POST {{baseUrl}}/todos/{todo-id}/attachments
+# Content-Type: multipart/form-data
+#
+# file: @/path/to/file.pdf
+
+### 15. 删除附件
+# DELETE {{baseUrl}}/attachments/{attachment-id}

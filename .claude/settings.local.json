@@ -61,7 +61,13 @@
       "Bash(npx shadcn *)",
       "Bash(cmd *)",
       "Bash(ln *)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__execute_sql",
+      "mcp__next_-_API_____read_project_oas_2tmcl6",
+      "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\[todoId]\" -Recurse -Force)",
+      "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\subtasks\" -Recurse -Force)",
+      "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\attachments\" -Recurse -Force)"
     ]
   },
   "enableAllProjectMcpServers": true,
