@@ -31,14 +31,14 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
         <TableHeader>
           <TableRow>
             <TableHead className="w-[50px] text-center"></TableHead>
-            <TableHead className="w-[200px] text-center">任务名称</TableHead>
+            <TableHead className="text-center">任务名称</TableHead>
             <TableHead className="w-[80px] text-center">优先级</TableHead>
-            <TableHead className="w-[120px] text-center">状态</TableHead>
-            <TableHead className="w-[120px] text-center">截止时间</TableHead>
-            <TableHead className="w-[150px] text-center">标签</TableHead>
-            <TableHead className="w-[120px] text-center">创建时间</TableHead>
-            <TableHead className="w-[100px] text-center">附件</TableHead>
-            <TableHead className="w-[150px] text-center">操作</TableHead>
+            <TableHead className="w-[110px] text-center">状态</TableHead>
+            <TableHead className="w-[110px] text-center">截止时间</TableHead>
+            <TableHead className="w-[140px] text-center">标签</TableHead>
+            <TableHead className="w-[140px] text-center">创建时间</TableHead>
+            <TableHead className="w-[90px] text-center">附件</TableHead>
+            <TableHead className="w-[140px] text-center">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -212,29 +212,6 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
     })
   }
 
-  const handleSetAll = (completed: boolean) => {
-    startTransition(async () => {
-      addOptimisticAction({ type: 'setAll', completed })
-      try {
-        await setAllTodosCompleted(completed)
-        setDbTodos((prev) => prev.map((t) => ({ ...t, completed })))
-      } catch (err) {
-        console.error('设置全部完成状态失败:', err)
-      }
-    })
-  }
-
-  const handleClear = () => {
-    startTransition(async () => {
-      addOptimisticAction({ type: 'clear' })
-      try {
-        await removeAllTodos()
-        setDbTodos([])
-      } catch (err) {
-        console.error('删除全部失败:', err)
-      }
-    })
-  }
 
   // 执行搜索
   const handleSearch = (e: React.FormEvent) => {

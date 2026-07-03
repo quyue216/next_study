@@ -132,10 +132,11 @@ export interface Todo {
   name: string
   createdAt: string
   completed: boolean
-  priority?: Priority //优先级
-  dueDate?: string //到期日
-  tags?: string[] //标签
-  attachments?: TodoAttachment[] //附件
+  priority?: Priority
+  dueDate?: string
+  tags?: string[]
+  attachments?: TodoAttachment[]
+  subTasks?: SubTask[]
 }
 
 export interface SubTask {
@@ -236,7 +237,8 @@ export async function getTodosPaginated(
     .from("todos")
     .select(`
       *,
-      todo_attachments (*)
+      todo_attachments (*),
+      sub_tasks (*)
     `, { count: "exact" })
     .eq("user_id", userId)
 
@@ -271,7 +273,8 @@ export async function getTodosPaginated(
 
   const todos = (data ?? []).map(row => ({
     ...mapRow(row),
-    attachments: row.todo_attachments ? row.todo_attachments.map(mapAttachmentRow) : []
+    attachments: row.todo_attachments ? row.todo_attachments.map(mapAttachmentRow) : [],
+    subTasks: row.sub_tasks ? row.sub_tasks.map(mapSubTaskRow) : []
   }))
 
   const total = count ?? 0

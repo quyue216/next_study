@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, X, Trash2, FileUp, Loader2, Edit3, Paperclip, FileImage } from 'lucide-react'
-import { Priority, Todo, TodoAttachment } from '../_lib/todo-service'
+import { Priority, Todo, TodoAttachment, SubTask } from '../_lib/todo-service'
 import { createTodoWithDetailsAndAttachments, updateTodoDetails } from '../actions'
 
 interface Attachment {
@@ -58,6 +58,7 @@ export function CreateTodoDialog({
   const [subTaskInput, setSubTaskInput] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [existingAttachments, setExistingAttachments] = useState<TodoAttachment[]>([])
+  const [existingSubTasks, setExistingSubTasks] = useState<SubTask[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isEditMode = !!todo
@@ -72,6 +73,7 @@ export function CreateTodoDialog({
       setDueDate(todo.dueDate || '')
       setTags(todo.tags || [])
       setExistingAttachments(todo.attachments || [])
+      setExistingSubTasks(todo.subTasks || [])
     }
   }, [todo])
 
@@ -86,6 +88,7 @@ export function CreateTodoDialog({
     setSubTaskInput('')
     setAttachments([])
     setExistingAttachments([])
+    setExistingSubTasks([])
     setIsUploading(false)
   }, [])
 
@@ -312,53 +315,77 @@ export function CreateTodoDialog({
               )}
             </div>
 
-            {/* 子任务 - 编辑模式暂时隐藏 */}
-            {!isEditMode && (
-              <div className="grid gap-2">
-                <Label>子任务</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={subTaskInput}
-                    onChange={(e) => setSubTaskInput(e.target.value)}
-                    placeholder="输入子任务"
-                    disabled={isPending || isUploading}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddSubTask()
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddSubTask}
-                    disabled={!subTaskInput.trim() || isPending || isUploading}
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-                {subTasks.length > 0 && (
-                  <div className="grid gap-2">
-                    {subTasks.map((subTask, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
-                      >
-                        <span className="text-sm">{subTask}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSubTask(index)}
-                          disabled={isPending || isUploading}
-                          className="hover:text-destructive"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+            {/* 子任务 */}
+            <div className="grid gap-2">
+              <Label>子任务</Label>
+
+              {/* 显示现有子任务（只读） */}
+              {isEditMode && existingSubTasks.length > 0 && (
+                <div className="grid gap-2 mb-2">
+                  {existingSubTasks.map((subTask) => (
+                    <div
+                      key={subTask.id}
+                      className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full border-2 ${subTask.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}></div>
+                        <span className={`text-sm ${subTask.completed ? 'line-through text-muted-foreground' : ''}`}>{subTask.name}</span>
                       </div>
-                    ))}
+                    </div>
+                  ))}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    子任务编辑功能开发中...
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* 新添加的子任务（创建模式下） */}
+              {!isEditMode && (
+                <>
+                  <div className="flex gap-2">
+                    <Input
+                      value={subTaskInput}
+                      onChange={(e) => setSubTaskInput(e.target.value)}
+                      placeholder="输入子任务"
+                      disabled={isPending || isUploading}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddSubTask()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddSubTask}
+                      disabled={!subTaskInput.trim() || isPending || isUploading}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                  {subTasks.length > 0 && (
+                    <div className="grid gap-2">
+                      {subTasks.map((subTask, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                        >
+                          <span className="text-sm">{subTask}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubTask(index)}
+                            disabled={isPending || isUploading}
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* 附件 - 编辑模式显示现有附件 */}
             <div className="grid gap-2">
