@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useCallback, useRef } from 'react'
+import React, { useState, useTransition, useCallback, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -23,7 +21,6 @@ import {
 import { Plus, X, Trash2, FileUp, Loader2 } from 'lucide-react'
 import { Priority } from '../_lib/todo-service'
 import { createTodoWithDetailsAndAttachments } from '../actions'
-import { createClient } from '@/lib/supabase'
 
 interface Attachment {
   file: File
@@ -32,10 +29,20 @@ interface Attachment {
 
 interface CreateTodoDialogProps {
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function CreateTodoDialog({ trigger }: CreateTodoDialogProps) {
-  const [open, setOpen] = useState(false)
+export function CreateTodoDialog({
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange
+}: CreateTodoDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen
+
   const [isPending, startTransition] = useTransition()
   const [isUploading, setIsUploading] = useState(false)
   const [name, setName] = useState('')
@@ -65,7 +72,7 @@ export function CreateTodoDialog({ trigger }: CreateTodoDialogProps) {
     if (!newOpen) {
       setTimeout(resetForm, 200)
     }
-  }, [resetForm])
+  }, [resetForm, setOpen])
 
   const handleAddTag = useCallback(() => {
     if (tagsInput.trim() && !tags.includes(tagsInput.trim())) {
@@ -137,7 +144,7 @@ export function CreateTodoDialog({ trigger }: CreateTodoDialogProps) {
         setIsUploading(false)
       }
     })
-  }, [name, priority, dueDate, tags, subTasks, attachments])
+  }, [name, priority, dueDate, tags, subTasks, attachments, setOpen])
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -146,218 +153,229 @@ export function CreateTodoDialog({ trigger }: CreateTodoDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger || <Button variant="secondary">添加</Button>}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" showCloseButton={true}>
-        <DialogHeader>
-          <DialogTitle>新建待办事项</DialogTitle>
-        </DialogHeader>
+    <>
+      {trigger ? (
+        React.cloneElement(trigger as React.ReactElement, {
+          onClick: (e: React.MouseEvent) => {
+            const originalOnClick = (trigger as React.ReactElement).props.onClick;
+            if (originalOnClick) originalOnClick(e);
+            setOpen(true);
+          }
+        })
+      ) : (
+        <Button variant="secondary" onClick={() => setOpen(true)}>添加</Button>
+      )}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>新建待办事项</DialogTitle>
+          </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {/* 任务名称 */}
-          <div className="grid gap-2">
-            <Label htmlFor="name">任务名称</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="请输入任务名称"
-              disabled={isPending || isUploading}
-            />
-          </div>
-
-          {/* 优先级 */}
-          <div className="grid gap-2">
-            <Label htmlFor="priority">优先级</Label>
-            <Select
-              value={priority}
-              onValueChange={(value) => setPriority(value as Priority)}
-              disabled={isPending || isUploading}
-            >
-              <SelectTrigger id="priority">
-                <SelectValue placeholder="请选择优先级" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">低</SelectItem>
-                <SelectItem value="medium">中</SelectItem>
-                <SelectItem value="high">高</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 到期日 */}
-          <div className="grid gap-2">
-            <Label htmlFor="dueDate">到期日</Label>
-            <Input
-              id="dueDate"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              disabled={isPending || isUploading}
-            />
-          </div>
-
-          {/* 标签 */}
-          <div className="grid gap-2">
-            <Label>标签</Label>
-            <div className="flex gap-2">
-              <Input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="输入标签"
-                disabled={isPending || isUploading}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleAddTag()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={handleAddTag}
-                disabled={!tagsInput.trim() || isPending || isUploading}
-              >
-                <Plus className="size-4" />
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-sm"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      disabled={isPending || isUploading}
-                      className="hover:text-destructive"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 子任务 */}
-          <div className="grid gap-2">
-            <Label>子任务</Label>
-            <div className="flex gap-2">
-              <Input
-                value={subTaskInput}
-                onChange={(e) => setSubTaskInput(e.target.value)}
-                placeholder="输入子任务"
-                disabled={isPending || isUploading}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleAddSubTask()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={handleAddSubTask}
-                disabled={!subTaskInput.trim() || isPending || isUploading}
-              >
-                <Plus className="size-4" />
-              </Button>
-            </div>
-            {subTasks.length > 0 && (
-              <div className="grid gap-2">
-                {subTasks.map((subTask, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
-                  >
-                    <span className="text-sm">{subTask}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSubTask(index)}
-                      disabled={isPending || isUploading}
-                      className="hover:text-destructive"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 附件 */}
-          <div className="grid gap-2">
-            <Label>附件</Label>
+          <div className="grid gap-4 py-4">
+            {/* 任务名称 */}
             <div className="grid gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileSelect}
+              <Label htmlFor="name">任务名称</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="请输入任务名称"
                 disabled={isPending || isUploading}
-                className="hidden"
-                id="file-upload"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isPending || isUploading}
-                className="w-full"
-              >
-                <FileUp className="size-4 mr-2" />
-                上传文件
-              </Button>
-              {attachments.length > 0 && (
+            </div>
+
+            {/* 优先级和到期日 - 并排显示 */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* 优先级 */}
+              <div className="grid gap-2">
+                <Label htmlFor="priority">优先级</Label>
+                <Select
+                  value={priority}
+                  onValueChange={(value) => setPriority(value as Priority)}
+                  disabled={isPending || isUploading}
+                >
+                  <SelectTrigger id="priority">
+                    <SelectValue placeholder="请选择优先级" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">低</SelectItem>
+                    <SelectItem value="medium">中</SelectItem>
+                    <SelectItem value="high">高</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 到期日 */}
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">到期日</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  disabled={isPending || isUploading}
+                />
+              </div>
+            </div>
+
+            {/* 标签 */}
+            <div className="grid gap-2">
+              <Label>标签</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="输入标签"
+                  disabled={isPending || isUploading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddTag()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddTag}
+                  disabled={!tagsInput.trim() || isPending || isUploading}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        disabled={isPending || isUploading}
+                        className="hover:text-destructive"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 子任务 */}
+            <div className="grid gap-2">
+              <Label>子任务</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={subTaskInput}
+                  onChange={(e) => setSubTaskInput(e.target.value)}
+                  placeholder="输入子任务"
+                  disabled={isPending || isUploading}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddSubTask()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddSubTask}
+                  disabled={!subTaskInput.trim() || isPending || isUploading}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+              {subTasks.length > 0 && (
                 <div className="grid gap-2">
-                  {attachments.map((attachment, index) => (
+                  {subTasks.map((subTask, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
                     >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <FileUp className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="text-sm truncate">{attachment.file.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          ({formatFileSize(attachment.file.size)})
-                        </span>
-                      </div>
+                      <span className="text-sm">{subTask}</span>
                       <button
                         type="button"
-                        onClick={() => handleRemoveAttachment(index)}
+                        onClick={() => handleRemoveSubTask(index)}
                         disabled={isPending || isUploading}
-                        className="hover:text-destructive shrink-0 ml-2"
+                        className="hover:text-destructive"
                       >
-                        <X className="size-4" />
+                        <Trash2 className="size-4" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" disabled={isPending || isUploading}>取消</Button>
-          </DialogClose>
-          <Button onClick={handleSubmit} disabled={!name.trim() || isPending || isUploading}>
-            {isPending || isUploading ? (
-              <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
-                创建中...
-              </>
-            ) : '创建'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {/* 附件 */}
+            <div className="grid gap-2">
+              <Label>附件</Label>
+              <div className="grid gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  disabled={isPending || isUploading}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPending || isUploading}
+                  className="w-full"
+                >
+                  <FileUp className="size-4 mr-2" />
+                  上传文件
+                </Button>
+                {attachments.length > 0 && (
+                  <div className="grid gap-2">
+                    {attachments.map((attachment, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileUp className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="text-sm truncate">{attachment.file.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({formatFileSize(attachment.file.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(index)}
+                          disabled={isPending || isUploading}
+                          className="hover:text-destructive shrink-0 ml-2"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" disabled={isPending || isUploading} onClick={() => setOpen(false)}>取消</Button>
+            <Button onClick={handleSubmit} disabled={!name.trim() || isPending || isUploading}>
+              {isPending || isUploading ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  创建中...
+                </>
+              ) : '创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

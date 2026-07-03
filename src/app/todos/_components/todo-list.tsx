@@ -27,15 +27,18 @@ export function TodoList({ todos, onToggle, onDelete, isPending, isLoading = fal
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>任务名称</TableHead>
-            <TableHead>创建时间</TableHead>
-            <TableHead>状态</TableHead>
-            <TableHead>操作</TableHead>
+            <TableHead className="w-[250px]">任务名称</TableHead>
+            <TableHead className="w-[80px]">优先级</TableHead>
+            <TableHead className="w-[120px]">状态</TableHead>
+            <TableHead className="w-[120px]">截止时间</TableHead>
+            <TableHead className="w-[120px]">创建时间</TableHead>
+            <TableHead className="w-[100px]">附件</TableHead>
+            <TableHead className="w-[120px]">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell colSpan={4}>
+            <TableCell colSpan={7}>
               <TodoListLoading />
             </TableCell>
           </TableRow>
@@ -48,16 +51,19 @@ export function TodoList({ todos, onToggle, onDelete, isPending, isLoading = fal
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>任务名称</TableHead>
-          <TableHead>创建时间</TableHead>
-          <TableHead>状态</TableHead>
-          <TableHead>操作</TableHead>
+          <TableHead className="w-[250px]">任务名称</TableHead>
+          <TableHead className="w-[80px]">优先级</TableHead>
+          <TableHead className="w-[120px]">状态</TableHead>
+          <TableHead className="w-[120px]">截止时间</TableHead>
+          <TableHead className="w-[120px]">创建时间</TableHead>
+          <TableHead className="w-[100px]">附件</TableHead>
+          <TableHead className="w-[120px]">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {todos.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
               暂无任务
             </TableCell>
           </TableRow>

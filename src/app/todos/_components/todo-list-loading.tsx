@@ -9,6 +9,8 @@ export function TodoListLoading() {
           <Skeleton className="h-5 flex-1" />
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-24" />
           <Skeleton className="h-8 w-16 rounded-md" />
         </div>
       ))}

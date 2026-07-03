@@ -135,6 +135,7 @@ export interface Todo {
   priority?: Priority //优先级
   dueDate?: string //到期日
   tags?: string[] //标签
+  attachments?: TodoAttachment[] //附件
 }
 
 export interface SubTask {
@@ -225,7 +226,10 @@ export async function getTodosPaginated(
 
   let query = supabase
     .from("todos")
-    .select("*", { count: "exact" })
+    .select(`
+      *,
+      todo_attachments (*)
+    `, { count: "exact" })
     .eq("user_id", userId)
 
   if (search) {
@@ -241,11 +245,16 @@ export async function getTodosPaginated(
     throw error
   }
 
+  const todos = (data ?? []).map(row => ({
+    ...mapRow(row),
+    attachments: row.todo_attachments ? row.todo_attachments.map(mapAttachmentRow) : []
+  }))
+
   const total = count ?? 0
   const totalPages = Math.ceil(total / pageSize)
 
   return {
-    data: (data ?? []).map(mapRow),
+    data: todos,
     total,
     page,
     pageSize,
