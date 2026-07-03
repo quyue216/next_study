@@ -213,11 +213,19 @@ export interface PaginatedResult<T> {
   totalPages: number
 }
 
+export interface SearchFilters {
+  search?: string
+  completed?: boolean
+  dueDateFrom?: string
+  dueDateTo?: string
+  tag?: string
+}
+
 export async function getTodosPaginated(
   userId: string,
   page: number = 1,
   pageSize: number = 10,
-  search?: string
+  filters?: SearchFilters
 ): Promise<PaginatedResult<Todo>> {
   const supabase = await createServerClient()
 
@@ -232,8 +240,24 @@ export async function getTodosPaginated(
     `, { count: "exact" })
     .eq("user_id", userId)
 
-  if (search) {
-    query = query.ilike("name", `%${search}%`)
+  if (filters?.search) {
+    query = query.ilike("name", `%${filters.search}%`)
+  }
+
+  if (filters?.completed !== undefined) {
+    query = query.eq("completed", filters.completed)
+  }
+
+  if (filters?.dueDateFrom) {
+    query = query.gte("due_date", filters.dueDateFrom)
+  }
+
+  if (filters?.dueDateTo) {
+    query = query.lte("due_date", filters.dueDateTo)
+  }
+
+  if (filters?.tag) {
+    query = query.contains("tags", [filters.tag])
   }
 
   const { data, error, count } = await query

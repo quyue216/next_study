@@ -17,7 +17,8 @@ import { AddTodoInput } from './add-todo-input'
 import { PaginationOptimized, type PaginationProps } from '@/components/pagination-optimized'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, X } from 'lucide-react' //图标库
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Search, X, Filter } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { CreateTodoDialog } from './create-todo-dialog'
@@ -33,17 +34,32 @@ type OptimisticAction =
 interface TodosContainerProps {
   initialTodos: Todo[]
   userEmail?: string
-  search?: string
+  filters?: {
+    search?: string
+    completed?: boolean
+    dueDateFrom?: string
+    dueDateTo?: string
+    tag?: string
+  }
+  allTags?: string[]
   pagination?: PaginationProps
-  isLoading?: boolean // 新增：接收 loading 状态
+  isLoading?: boolean
 }
 
-export function TodosContainer({ initialTodos, userEmail, search: initialSearch, pagination, isLoading = false }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail, filters, allTags = [], pagination, isLoading = false }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [searchInput, setSearchInput] = useState(initialSearch || '')
+
+  // 搜索状态
+  const [searchInput, setSearchInput] = useState(filters?.search || '')
+  const [completedFilter, setCompletedFilter] = useState<string>(filters?.completed !== undefined ? String(filters.completed) : '')
+  const [dueDateFrom, setDueDateFrom] = useState(filters?.dueDateFrom || '')
+  const [dueDateTo, setDueDateTo] = useState(filters?.dueDateTo || '')
+  const [selectedTag, setSelectedTag] = useState(filters?.tag || '')
+  const [showFilters, setShowFilters] = useState(false)
+
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
@@ -91,7 +107,6 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
       addOptimisticAction({ type: 'add', tempTodo })
       try {
         await createTodoClient(name)
-        // createTodoClient 内部已经调用了 revalidatePath(它会强制作废缓存)，会自动显示最新数据
       } catch (err) {
         console.error('添加失败:', err)
       }
@@ -178,64 +193,201 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
     })
   }
 
+  // 执行搜索
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    applyFilters()
+  }
+
+  // 应用所有筛选条件
+  const applyFilters = () => {
     startTransition(() => {
       const params = new URLSearchParams(searchParams)
+
+      // 重置到第一页
+      params.delete('page')
+
+      // 关键词搜索
       if (searchInput.trim()) {
         params.set('search', searchInput.trim())
-        params.delete('page') // 搜索时重置到第一页
       } else {
         params.delete('search')
-        params.delete('page')
       }
+
+      // 完成状态
+      if (completedFilter) {
+        params.set('completed', completedFilter)
+      } else {
+        params.delete('completed')
+      }
+
+      // 截止日期
+      if (dueDateFrom) {
+        params.set('dueDateFrom', dueDateFrom)
+      } else {
+        params.delete('dueDateFrom')
+      }
+
+      if (dueDateTo) {
+        params.set('dueDateTo', dueDateTo)
+      } else {
+        params.delete('dueDateTo')
+      }
+
+      // 标签
+      if (selectedTag) {
+        params.set('tag', selectedTag)
+      } else {
+        params.delete('tag')
+      }
+
       router.push(`?${params.toString()}`)
     })
   }
 
-  const handleClearSearch = () => {
+  // 清除所有筛选条件
+  const clearAllFilters = () => {
     startTransition(() => {
       setSearchInput('')
+      setCompletedFilter('')
+      setDueDateFrom('')
+      setDueDateTo('')
+      setSelectedTag('')
+
       const params = new URLSearchParams(searchParams)
       params.delete('search')
+      params.delete('completed')
+      params.delete('dueDateFrom')
+      params.delete('dueDateTo')
+      params.delete('tag')
       params.delete('page')
       router.push(`?${params.toString()}`)
     })
   }
 
+  // 检查是否有活跃的筛选条件
+  const hasActiveFilters = !!(searchInput || completedFilter || dueDateFrom || dueDateTo || selectedTag)
+
   return (
     <div className="space-y-4">
       <TodoHeader email={userEmail}>
         <div className="space-y-3">
-          {/* 搜索框和添加按钮容器 */}
+          {/* 顶部搜索和添加按钮容器 */}
           <div className="flex gap-2 items-center justify-between">
-            <form onSubmit={handleSearch} className="flex gap-2 flex-1 max-w-sm">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="搜索任务..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-9"
-                />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
-              <Button type="submit" disabled={isPending}>
-                搜索
+            <div className="flex gap-2 flex-1 max-w-2xl items-center">
+              <form onSubmit={handleSearch} className="flex gap-2 flex-1 max-w-sm">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="搜索任务..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="pl-9"
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchInput(''); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+                <Button type="submit" disabled={isPending}>
+                  搜索
+                </Button>
+              </form>
+
+              {/* 筛选按钮 */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(hasActiveFilters && 'border-blue-500 text-blue-500')}
+              >
+                <Filter className="size-4 mr-1" />
+                筛选
+                {hasActiveFilters && <span className="ml-1 text-xs">(有)</span>}
               </Button>
-            </form>
-            {/* 新增的添加按钮放到搜索框容器右边 */}
+
+              {/* 清除筛选按钮 */}
+              {hasActiveFilters && (
+                <Button type="button" variant="ghost" onClick={clearAllFilters}>
+                  清除筛选
+                </Button>
+              )}
+            </div>
             <AddTodoInput onAdd={handleAdd} isPending={isPending} />
           </div>
+
+          {/* 展开的筛选面板 */}
+          {showFilters && (
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 完成状态筛选 */}
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">完成状态</label>
+                  <Select value={completedFilter} onValueChange={setCompletedFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="全部" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">全部</SelectItem>
+                      <SelectItem value="true">已完成</SelectItem>
+                      <SelectItem value="false">未完成</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 截止日期起始 */}
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">截止日期从</label>
+                  <Input
+                    type="date"
+                    value={dueDateFrom}
+                    onChange={(e) => setDueDateFrom(e.target.value)}
+                  />
+                </div>
+
+                {/* 截止日期结束 */}
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">截止日期到</label>
+                  <Input
+                    type="date"
+                    value={dueDateTo}
+                    onChange={(e) => setDueDateTo(e.target.value)}
+                  />
+                </div>
+
+                {/* 标签筛选 */}
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">标签</label>
+                  <Select value={selectedTag} onValueChange={setSelectedTag}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="全部标签" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">全部</SelectItem>
+                      {allTags.map(tag => (
+                        <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={clearAllFilters}>
+                  重置
+                </Button>
+                <Button type="button" onClick={applyFilters}>
+                  应用筛选
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </TodoHeader>
 
@@ -245,7 +397,7 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
         onDelete={handleDelete}
         onEdit={handleEdit}
         isPending={isPending}
-        isLoading={isLoading} // 传递 loading 状态
+        isLoading={isLoading}
       />
 
       <TodoFooter
