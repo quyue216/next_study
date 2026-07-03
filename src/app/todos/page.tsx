@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase.server";
 import { TodosWrapper } from "./_components/todos-wrapper";
-import { getTodosPaginated, type PaginatedResult, type Todo } from "./_lib/todo-service";
+import { getTodosPaginated, getTagsByUser, type PaginatedResult, type Todo } from "./_lib/todo-service";
 
 interface PageProps {
   searchParams?: Promise<{
