@@ -28,18 +28,19 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[120px]">任务名称</TableHead>
-            <TableHead className="w-[120px]">优先级</TableHead>
-            <TableHead className="w-[120px]">状态</TableHead>
-            <TableHead className="w-[120px]">截止时间</TableHead>
-            <TableHead className="w-[120px]">创建时间</TableHead>
-            <TableHead className="w-[100px]">附件</TableHead>
-            <TableHead className="w-[120px]">操作</TableHead>
+            <TableHead className="w-[200px] text-center">任务名称</TableHead>
+            <TableHead className="w-[80px] text-center">优先级</TableHead>
+            <TableHead className="w-[120px] text-center">状态</TableHead>
+            <TableHead className="w-[120px] text-center">截止时间</TableHead>
+            <TableHead className="w-[150px] text-center">标签</TableHead>
+            <TableHead className="w-[120px] text-center">创建时间</TableHead>
+            <TableHead className="w-[100px] text-center">附件</TableHead>
+            <TableHead className="w-[150px] text-center">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell colSpan={7}>
+            <TableCell colSpan={8}>
               <TodoListLoading />
             </TableCell>
           </TableRow>
@@ -52,19 +53,20 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[250px]">任务名称</TableHead>
-          <TableHead className="w-[80px]">优先级</TableHead>
-          <TableHead className="w-[120px]">状态</TableHead>
-          <TableHead className="w-[120px]">截止时间</TableHead>
-          <TableHead className="w-[120px]">创建时间</TableHead>
-          <TableHead className="w-[100px]">附件</TableHead>
-          <TableHead className="w-[120px]">操作</TableHead>
+          <TableHead className="w-[200px] text-center">任务名称</TableHead>
+          <TableHead className="w-[80px] text-center">优先级</TableHead>
+          <TableHead className="w-[120px] text-center">状态</TableHead>
+          <TableHead className="w-[120px] text-center">截止时间</TableHead>
+          <TableHead className="w-[150px] text-center">标签</TableHead>
+          <TableHead className="w-[120px] text-center">创建时间</TableHead>
+          <TableHead className="w-[100px] text-center">附件</TableHead>
+          <TableHead className="w-[150px] text-center">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {todos.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+            <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
               暂无任务
             </TableCell>
           </TableRow>

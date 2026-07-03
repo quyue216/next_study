@@ -64,36 +64,23 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
           isPending && isTemp && "animate-pulse"
         )}
       >
-        <td className={cn("p-2 align-middle", todo.completed && "line-through text-muted-foreground")}>
-          <div className="space-y-1">
-            <div className="font-medium">
-              {todo.name}
-              {isTemp && (
-                <span className="ml-2 text-[10px] text-blue-500 font-medium">
-                  同步中
-                </span>
-              )}
-            </div>
-            {/* 标签 */}
-            {todo.tags && todo.tags.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap">
-                <Tag className="w-3 h-3 text-muted-foreground" />
-                {todo.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+        <td className={cn("p-2 align-middle text-center", todo.completed && "line-through text-muted-foreground")}>
+          <div className="font-medium">
+            {todo.name}
+            {isTemp && (
+              <span className="ml-2 text-[10px] text-blue-500 font-medium">
+                同步中
+              </span>
             )}
           </div>
         </td>
-        <td className="p-2 align-middle">
-          <Badge className={cn("font-normal", priorityInfo.className)}>
+        <td className="p-2 align-middle text-center">
+          <Badge className={cn("font-normal inline-flex justify-center", priorityInfo.className)}>
             {priorityInfo.text}
           </Badge>
         </td>
-        <td className="p-2 align-middle">
-          <div className="flex items-center gap-2">
+        <td className="p-2 align-middle text-center">
+          <div className="flex items-center justify-center gap-2">
             <Checkbox
               id={checkboxId}
               checked={todo.completed}
@@ -107,7 +94,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
             </label>
           </div>
         </td>
-        <td className="p-2 align-middle">
+        <td className="p-2 align-middle text-center">
           {todo.dueDate ? (
             <div className="text-xs text-blue-600">
               {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
@@ -116,17 +103,30 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
             <span className="text-xs text-muted-foreground">-</span>
           )}
         </td>
-        <td className="p-2 align-middle">
+        <td className="p-2 align-middle text-center">
+          {todo.tags && todo.tags.length > 0 ? (
+            <div className="flex items-center justify-center gap-1 flex-wrap">
+              {todo.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          )}
+        </td>
+        <td className="p-2 align-middle text-center">
           <div className="text-xs text-muted-foreground">
             {createdAtText}
           </div>
         </td>
-        <td className="p-2 align-middle">
+        <td className="p-2 align-middle text-center">
           {hasAttachments && (
             <div className="space-y-1">
               {/* 图片预览缩略图 */}
               {imageAttachments.length > 0 && (
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex gap-1 flex-wrap justify-center">
                   {imageAttachments.slice(0, 3).map((attachment) => (
                     <div
                       key={attachment.id}
@@ -148,7 +148,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
               )}
               {/* 如果有图片但都加载失败，显示图标 */}
               {imageAttachments.length === 0 && todo.attachments?.some(att => isImageFile(att.mimeType)) && (
-                <div className="flex gap-1">
+                <div className="flex gap-1 justify-center">
                   <FileImage className="w-4 h-4 text-muted-foreground" />
                 </div>
               )}
@@ -160,8 +160,8 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
             </div>
           )}
         </td>
-        <td className="p-2 align-middle">
-          <div className="flex gap-2">
+        <td className="p-2 align-middle text-center">
+          <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
               size="sm"
