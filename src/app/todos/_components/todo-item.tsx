@@ -14,6 +14,8 @@ interface TodoItemProps {
   onToggle: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
   onEdit: (todo: Todo) => void
+  onToggleSelect?: (id: string) => void
+  isSelected?: boolean
   isPending?: boolean
 }
 
@@ -36,7 +38,7 @@ function isImageFile(mimeType?: string) {
   return mimeType?.startsWith('image/') ?? false
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
@@ -61,10 +63,20 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
       <tr
         className={cn(
           "border-b transition-colors hover:bg-muted/50",
+          isSelected && "bg-blue-50 dark:bg-blue-950/20",
           isTemp && "bg-blue-50/50 dark:bg-blue-950/20",
           isPending && isTemp && "animate-pulse"
         )}
       >
+        {/* 选择框 */}
+        <td className="p-2 align-middle text-center">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect?.(todo.id)}
+            disabled={isPending}
+          />
+        </td>
+
         <td className={cn("p-2 align-middle text-center", todo.completed && "line-through text-muted-foreground")}>
           <div className="font-medium">
             {todo.name}

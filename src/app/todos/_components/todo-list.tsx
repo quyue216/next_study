@@ -17,17 +17,20 @@ interface TodoListProps {
   onToggle: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
   onEdit: (todo: Todo) => void
+  onToggleSelect?: (id: string) => void
+  selectedIds?: Set<string>
   isPending: boolean
-  isLoading?: boolean // 新增：控制骨架屏显示
+  isLoading?: boolean
 }
 
-export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoading = false }: TodoListProps) {
+export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, selectedIds, isPending, isLoading = false }: TodoListProps) {
   // 如果正在加载，显示骨架屏
   if (isLoading) {
     return (
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px] text-center"></TableHead>
             <TableHead className="w-[200px] text-center">任务名称</TableHead>
             <TableHead className="w-[80px] text-center">优先级</TableHead>
             <TableHead className="w-[120px] text-center">状态</TableHead>
@@ -40,7 +43,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell colSpan={8}>
+            <TableCell colSpan={9}>
               <TodoListLoading />
             </TableCell>
           </TableRow>
@@ -53,6 +56,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-[50px] text-center"></TableHead>
           <TableHead className="w-[200px] text-center">任务名称</TableHead>
           <TableHead className="w-[80px] text-center">优先级</TableHead>
           <TableHead className="w-[120px] text-center">状态</TableHead>
@@ -66,7 +70,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
       <TableBody>
         {todos.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+            <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
               暂无任务
             </TableCell>
           </TableRow>
@@ -78,6 +82,8 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, isPending, isLoadi
               onToggle={onToggle}
               onDelete={onDelete}
               onEdit={onEdit}
+              onToggleSelect={onToggleSelect}
+              isSelected={selectedIds?.has(todo.id)}
               isPending={isPending}
             />
           ))

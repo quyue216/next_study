@@ -479,6 +479,17 @@ export async function clearTodos(userId: string): Promise<Todo[]> {
   return getTodos(userId)
 }
 
+export async function deleteTodosByIds(userId: string, todoIds: string[]): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", todoIds)
+
+  if (error) throw error
+}
+
 // ========== 标签相关 ==========
 export async function getTagsByUser(userId: string): Promise<string[]> {
   const supabase = await createServerClient()

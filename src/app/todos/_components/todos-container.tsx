@@ -6,19 +6,17 @@ import {
   createTodoClient,
   toggleTodoState,
   removeTodo,
-  setAllTodosCompleted,
-  removeAllTodos,
+  removeSelectedTodos,
   updateTodoDetails,
 } from '../actions'
 import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
-import { TodoFooter } from './todo-footer'
 import { AddTodoInput } from './add-todo-input'
 import { PaginationOptimized, type PaginationProps } from '@/components/pagination-optimized'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, X, Filter } from 'lucide-react'
+import { Search, X, Filter, Trash2, CheckSquare, Square } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { CreateTodoDialog } from './create-todo-dialog'
@@ -27,6 +25,7 @@ type OptimisticAction =
   | { type: 'add'; tempTodo: Todo }
   | { type: 'toggle'; id: string; completed: boolean }
   | { type: 'delete'; id: string }
+  | { type: 'deleteMany'; ids: string[] }
   | { type: 'update'; id: string; data: Partial<Todo> }
   | { type: 'setAll'; completed: boolean }
   | { type: 'clear' }
@@ -60,6 +59,9 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
   const [selectedTag, setSelectedTag] = useState(filters?.tag || '')
   const [showFilters, setShowFilters] = useState(false)
 
+  // 选中状态
+  const [selectedTodoIds, setSelectedTodoIds] = useState<Set<string>>(new Set())
+
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
@@ -81,6 +83,8 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
           )
         case 'delete':
           return state.filter((t) => t.id !== action.id)
+        case 'deleteMany':
+          return state.filter((t) => !action.ids.includes(t.id))
         case 'update':
           return state.map((t) =>
             t.id === action.id ? { ...t, ...action.data } : t
@@ -135,6 +139,45 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         setDbTodos((prev) => prev.filter((t) => t.id !== id))
       } catch (err) {
         console.error('删除失败:', err)
+      }
+    })
+  }
+
+  // 选择处理
+  const handleToggleSelect = (todoId: string) => {
+    setSelectedTodoIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(todoId)) {
+        newSet.delete(todoId)
+      } else {
+        newSet.add(todoId)
+      }
+      return newSet
+    })
+  }
+
+  // 全选/取消全选
+  const handleToggleSelectAll = () => {
+    if (selectedTodoIds.size === optimisticTodos.length) {
+      setSelectedTodoIds(new Set())
+    } else {
+      setSelectedTodoIds(new Set(optimisticTodos.map(t => t.id)))
+    }
+  }
+
+  // 批量删除
+  const handleDeleteSelected = () => {
+    if (selectedTodoIds.size === 0) return
+
+    const idsToDelete = Array.from(selectedTodoIds)
+    startTransition(async () => {
+      addOptimisticAction({ type: 'deleteMany', ids: idsToDelete })
+      try {
+        await removeSelectedTodos(idsToDelete)
+        setDbTodos((prev) => prev.filter(t => !idsToDelete.includes(t.id)))
+        setSelectedTodoIds(new Set())
+      } catch (err) {
+        console.error('批量删除失败:', err)
       }
     })
   }
@@ -274,7 +317,37 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         <div className="space-y-3">
           {/* 顶部搜索和添加按钮容器 */}
           <div className="flex gap-2 items-center justify-between">
-            <div className="flex gap-2 flex-1 max-w-2xl items-center">
+            <div className="flex gap-2 flex-1 max-w-3xl items-center">
+              {/* 全选/删除选中按钮组 */}
+              <div className="flex gap-2 mr-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleSelectAll}
+                  disabled={optimisticTodos.length === 0}
+                >
+                  {selectedTodoIds.size === optimisticTodos.length && optimisticTodos.length > 0 ? (
+                    <CheckSquare className="size-4 mr-1" />
+                  ) : (
+                    <Square className="size-4 mr-1" />
+                  )}
+                  {selectedTodoIds.size === optimisticTodos.length && optimisticTodos.length > 0 ? '取消全选' : '全选'}
+                </Button>
+                {selectedTodoIds.size > 0 && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    disabled={isPending}
+                  >
+                    <Trash2 className="size-4 mr-1" />
+                    删除选中 ({selectedTodoIds.size})
+                  </Button>
+                )}
+              </div>
+
               <form onSubmit={handleSearch} className="flex gap-2 flex-1 max-w-sm">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -396,16 +469,12 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         onToggle={handleToggle}
         onDelete={handleDelete}
         onEdit={handleEdit}
+        onToggleSelect={handleToggleSelect}
+        selectedIds={selectedTodoIds}
         isPending={isPending}
         isLoading={isLoading}
       />
 
-      <TodoFooter
-        todos={optimisticTodos}
-        onSetAll={handleSetAll}
-        onClear={handleClear}
-        isPending={isPending}
-      />
 
       {/* 服务端分页器 */}
       {pagination && pagination.total > 0 && (

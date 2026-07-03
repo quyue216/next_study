@@ -7,6 +7,7 @@ import {
   setAllTodoCompleted,
   deleteTodo,
   clearTodos,
+  deleteTodosByIds,
   updateTodo,
   Priority,
   CreateTodoData,
@@ -107,6 +108,14 @@ export async function removeAllTodos() {
   if (!user) return;
 
   await clearTodos(user.id);
+  revalidatePath("/todos");
+}
+
+export async function removeSelectedTodos(todoIds: string[]) {
+  const user = await getCurrentUser();
+  if (!user || todoIds.length === 0) return;
+
+  await deleteTodosByIds(user.id, todoIds);
   revalidatePath("/todos");
 }
 
