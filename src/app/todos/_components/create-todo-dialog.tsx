@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, X, Trash2, FileUp, Loader2, Edit3 } from 'lucide-react'
-import { Priority, Todo } from '../_lib/todo-service'
+import { Plus, X, Trash2, FileUp, Loader2, Edit3, Paperclip, FileImage } from 'lucide-react'
+import { Priority, Todo, TodoAttachment } from '../_lib/todo-service'
 import { createTodoWithDetailsAndAttachments, updateTodoDetails } from '../actions'
 
 interface Attachment {
@@ -57,6 +57,7 @@ export function CreateTodoDialog({
   const [subTasks, setSubTasks] = useState<string[]>([])
   const [subTaskInput, setSubTaskInput] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [existingAttachments, setExistingAttachments] = useState<TodoAttachment[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isEditMode = !!todo
@@ -70,10 +71,11 @@ export function CreateTodoDialog({
       setPriority(todo.priority || '')
       setDueDate(todo.dueDate || '')
       setTags(todo.tags || [])
-      // 子任务和附件在编辑模式暂不处理，需要额外查询
+      setExistingAttachments(todo.attachments || [])
     }
   }, [todo])
 
+  // 重置表单
   const resetForm = useCallback(() => {
     setName('')
     setPriority('')
@@ -83,6 +85,7 @@ export function CreateTodoDialog({
     setSubTasks([])
     setSubTaskInput('')
     setAttachments([])
+    setExistingAttachments([])
     setIsUploading(false)
   }, [])
 
@@ -140,6 +143,11 @@ export function CreateTodoDialog({
     })
   }, [])
 
+  // 判断是否是图片文件
+  const isImageFile = (mimeType?: string) => {
+    return mimeType?.startsWith('image/') ?? false
+  }
+
   const handleSubmit = useCallback(() => {
     if (!name.trim()) return
 
@@ -169,12 +177,14 @@ export function CreateTodoDialog({
 
           await createTodoWithDetailsAndAttachments(formData)
         }
+        // 成功后关闭对话框并重置表单
         setOpen(false)
+        setTimeout(resetForm, 100)
       } finally {
         setIsUploading(false)
       }
     })
-  }, [name, priority, dueDate, tags, subTasks, attachments, isEditMode, onSubmit, setOpen])
+  }, [name, priority, dueDate, tags, subTasks, attachments, isEditMode, onSubmit, setOpen, resetForm])
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -345,59 +355,87 @@ export function CreateTodoDialog({
               </div>
             )}
 
-            {/* 附件 - 编辑模式暂时隐藏 */}
-            {!isEditMode && (
+            {/* 附件 - 编辑模式显示现有附件 */}
+            <div className="grid gap-2">
+              <Label>附件</Label>
               <div className="grid gap-2">
-                <Label>附件</Label>
-                <div className="grid gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileSelect}
-                    disabled={isPending || isUploading}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isPending || isUploading}
-                    className="w-full"
-                  >
-                    <FileUp className="size-4 mr-2" />
-                    上传文件
-                  </Button>
-                  {attachments.length > 0 && (
-                    <div className="grid gap-2">
-                      {attachments.map((attachment, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
-                        >
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <FileUp className="size-4 shrink-0 text-muted-foreground" />
-                            <span className="text-sm truncate">{attachment.file.name}</span>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              ({formatFileSize(attachment.file.size)})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveAttachment(index)}
-                            disabled={isPending || isUploading}
-                            className="hover:text-destructive shrink-0 ml-2"
-                          >
-                            <X className="size-4" />
-                          </button>
+                {!isEditMode && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      onChange={handleFileSelect}
+                      disabled={isPending || isUploading}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isPending || isUploading}
+                      className="w-full"
+                    >
+                      <FileUp className="size-4 mr-2" />
+                      上传文件
+                    </Button>
+                  </>
+                )}
+
+                {/* 显示现有附件（编辑模式） */}
+                {isEditMode && existingAttachments.length > 0 && (
+                  <div className="grid gap-2">
+                    {existingAttachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          {isImageFile(attachment.mimeType) ? (
+                            <FileImage className="size-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="text-sm truncate">{attachment.fileName}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({formatFileSize(attachment.fileSize)})
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 显示新上传的附件 */}
+                {attachments.length > 0 && (
+                  <div className="grid gap-2">
+                    {attachments.map((attachment, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileUp className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="text-sm truncate">{attachment.file.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            ({formatFileSize(attachment.file.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(index)}
+                          disabled={isPending || isUploading}
+                          className="hover:text-destructive shrink-0 ml-2"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           <DialogFooter>

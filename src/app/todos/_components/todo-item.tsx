@@ -50,6 +50,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
   const priorityInfo = getPriorityInfo(todo.priority)
   const imageAttachments = todo.attachments?.filter(att => isImageFile(att.mimeType) && !imageErrors.has(att.id)) ?? []
   const hasAttachments = todo.attachments && todo.attachments.length > 0
+  const hasTags = todo.tags && Array.isArray(todo.tags) && todo.tags.length > 0
 
   const handleImageError = (id: string) => {
     setImageErrors(prev => new Set([...prev, id]))
@@ -104,10 +105,10 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoIt
           )}
         </td>
         <td className="p-2 align-middle text-center">
-          {todo.tags && todo.tags.length > 0 ? (
+          {hasTags ? (
             <div className="flex items-center justify-center gap-1 flex-wrap">
-              {todo.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+              {todo.tags!.map((tag, index) => (
+                <Badge key={`${tag}-${index}`} variant="secondary" className="text-xs px-1.5 py-0">
                   {tag}
                 </Badge>
               ))}
