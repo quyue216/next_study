@@ -168,32 +168,35 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
     <div className="space-y-4">
       <TodoHeader email={userEmail}>
         <div className="space-y-3">
-          <AddTodoInput onAdd={handleAdd} isPending={isPending} />
-          {/* 搜索框 */}
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="搜索任务..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9"
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-            <Button type="submit" disabled={isPending}>
-              搜索
-            </Button>
-          </form>
+          {/* 搜索框和添加按钮容器 */}
+          <div className="flex gap-2 items-center justify-between">
+            <form onSubmit={handleSearch} className="flex gap-2 flex-1 max-w-sm">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="搜索任务..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+              <Button type="submit" disabled={isPending}>
+                搜索
+              </Button>
+            </form>
+            {/* 新增的添加按钮放到搜索框容器右边 */}
+            <AddTodoInput onAdd={handleAdd} isPending={isPending} />
+          </div>
         </div>
       </TodoHeader>
 

@@ -2,6 +2,131 @@ import { createServerClient } from "@/lib/supabase.server";
 
 export type Priority = 'low' | 'medium' | 'high';
 
+// 生成唯一文件名
+function generateUniqueFileName(originalName: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  const ext = originalName.split('.').pop() || '';
+  const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+  return `${nameWithoutExt}-${timestamp}-${random}.${ext}`;
+}
+
+// 上传文件到 Supabase Storage
+export async function uploadAttachment(
+  userId: string,
+  todoId: string,
+  file: File
+): Promise<{ fileName: string; fileUrl: string; fileSize: number; mimeType: string }> {
+  const supabase = await createServerClient();
+
+  const uniqueFileName = generateUniqueFileName(file.name);
+  const filePath = `${userId}/${todoId}/${uniqueFileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('todo-attachments')
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error('[uploadAttachment] Error uploading file:', uploadError);
+    throw uploadError;
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('todo-attachments')
+    .getPublicUrl(filePath);
+
+  return {
+    fileName: file.name,
+    fileUrl: publicUrl,
+    fileSize: file.size,
+    mimeType: file.type,
+  };
+}
+
+// 创建待办事项并上传附件
+export async function addTodoWithAttachments(
+  userId: string,
+  data: string | CreateTodoData,
+  files: File[]
+): Promise<Todo[]> {
+  const supabase = await createServerClient();
+
+  // 1. 准备主任务数据
+  const todoData = typeof data === 'string'
+    ? { name: data, completed: false, user_id: userId }
+    : {
+        name: data.name,
+        completed: false,
+        user_id: userId,
+        priority: data.priority,
+        due_date: data.dueDate,
+        tags: data.tags
+      };
+
+  // 2. 提取子任务数据
+  const subTasksNames = typeof data !== 'string' && data.subTasks ? data.subTasks.filter(name => name.trim()) : [];
+
+  // 3. 创建主任务
+  const { data: insertedTodo, error: insertError } = await supabase
+    .from("todos")
+    .insert(todoData)
+    .select()
+    .single();
+
+  if (insertError || !insertedTodo) {
+    console.error('[addTodoWithAttachments] Error inserting todo:', insertError);
+    throw insertError;
+  }
+
+  try {
+    // 4. 创建子任务（如果有）
+    if (subTasksNames.length > 0) {
+      const subTasksToInsert = subTasksNames.map(name => ({
+        todo_id: insertedTodo.id,
+        name: name.trim(),
+        completed: false
+      }));
+
+      const { error: subTasksError } = await supabase
+        .from("sub_tasks")
+        .insert(subTasksToInsert);
+
+      if (subTasksError) {
+        console.error('[addTodoWithAttachments] Error inserting subtasks:', subTasksError);
+        throw subTasksError;
+      }
+    }
+
+    // 5. 上传附件（如果有）
+    if (files.length > 0) {
+      for (const file of files) {
+        const attachmentData = await uploadAttachment(userId, insertedTodo.id, file);
+
+        const { error: attachmentError } = await supabase
+          .from("todo_attachments")
+          .insert({
+            todo_id: insertedTodo.id,
+            file_name: attachmentData.fileName,
+            file_url: attachmentData.fileUrl,
+            file_size: attachmentData.fileSize,
+            mime_type: attachmentData.mimeType,
+          });
+
+        if (attachmentError) {
+          console.error('[addTodoWithAttachments] Error inserting attachment:', attachmentError);
+          throw attachmentError;
+        }
+      }
+    }
+  } catch (error) {
+    // 如果有任何失败，删除已创建的待办事项（会级联删除子任务和附件）
+    await supabase.from("todos").delete().eq("id", insertedTodo.id);
+    throw error;
+  }
+
+  return getTodos(userId);
+}
+
 export interface Todo {
   id: string
   name: string
@@ -161,10 +286,13 @@ export interface CreateTodoData {
   priority?: Priority
   dueDate?: string
   tags?: string[]
+  subTasks?: string[] // 子任务名称列表
 }
 
 export async function addTodo(userId: string, data: string | CreateTodoData): Promise<Todo[]> {
   const supabase = await createServerClient()
+
+  // 1. 准备主任务数据
   const todoData = typeof data === 'string'
     ? { name: data, completed: false, user_id: userId }
     : {
@@ -176,14 +304,54 @@ export async function addTodo(userId: string, data: string | CreateTodoData): Pr
         tags: data.tags
       }
 
-  const { error } = await supabase
+  // 2. 提取子任务数据
+  const subTasksNames = typeof data !== 'string' && data.subTasks ? data.subTasks.filter(name => name.trim()) : []
+
+  // 3. 如果没有子任务，直接创建主任务
+  if (subTasksNames.length === 0) {
+    const { error } = await supabase
+      .from("todos")
+      .insert(todoData)
+
+    if (error) {
+      console.error("[addTodo] Error:", error)
+      throw error
+    }
+    return getTodos(userId)
+  }
+
+  // 4. 有子任务时，使用事务创建
+  // 注意：Supabase 客户端没有直接的事务 API，我们使用 RPC 或分步操作
+  // 先创建主任务，获取 ID
+  const { data: insertedTodo, error: insertError } = await supabase
     .from("todos")
     .insert(todoData)
+    .select()
+    .single()
 
-  if (error) {
-    console.error("[addTodo] Error:", error)
-    throw error
+  if (insertError || !insertedTodo) {
+    console.error("[addTodo] Error inserting todo:", insertError)
+    throw insertError
   }
+
+  // 5. 创建子任务
+  const subTasksToInsert = subTasksNames.map(name => ({
+    todo_id: insertedTodo.id,
+    name: name.trim(),
+    completed: false
+  }))
+
+  const { error: subTasksError } = await supabase
+    .from("sub_tasks")
+    .insert(subTasksToInsert)
+
+  if (subTasksError) {
+    console.error("[addTodo] Error inserting subtasks:", subTasksError)
+    // 如果子任务创建失败，尝试删除主任务（尽力回滚）
+    await supabase.from("todos").delete().eq("id", insertedTodo.id)
+    throw subTasksError
+  }
+
   return getTodos(userId)
 }
 

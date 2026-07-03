@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, priority, dueDate, tags } = body
+    const { name, priority, dueDate, tags, subTasks } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
       name: name.trim(),
       priority: priority as Priority,
       dueDate,
-      tags
+      tags,
+      subTasks: Array.isArray(subTasks) ? subTasks : undefined
     }
 
     await addTodo(user.id, todoData)

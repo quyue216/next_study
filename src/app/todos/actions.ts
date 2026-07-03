@@ -13,6 +13,7 @@ import {
   addSubTask,
   updateSubTask,
   deleteSubTask,
+  addTodoWithAttachments,
 } from "./_lib/todo-service";
 import { revalidatePath } from "next/cache";
 
@@ -49,6 +50,16 @@ export async function createTodoWithDetails(data: CreateTodoData) {
 
   await addTodo(user.id, data);
   revalidatePath("/todos"); //强制props更新
+}
+
+// 新增：带子任务的创建函数（前端可以调用这个）
+export async function createTodoWithSubTasks(data: CreateTodoData & { subTasks?: string[] }) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  if (!data.name?.trim()) return;
+
+  await addTodo(user.id, data);
+  revalidatePath("/todos");
 }
 
 export async function toggleTodoState(id: string, completed: boolean) {
@@ -121,6 +132,40 @@ export async function removeSubTask(subTaskId: string) {
   if (!user || !subTaskId) return;
 
   await deleteSubTask(subTaskId);
+  revalidatePath("/todos");
+}
+
+// 创建待办事项并上传附件
+export async function createTodoWithDetailsAndAttachments(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const name = formData.get('name') as string;
+  if (!name?.trim()) return;
+
+  const priority = formData.get('priority') as Priority | null;
+  const dueDate = formData.get('dueDate') as string | null;
+  const tagsString = formData.get('tags') as string | null;
+  const subTasksString = formData.get('subTasks') as string | null;
+
+  const tags = tagsString ? JSON.parse(tagsString) as string[] : undefined;
+  const subTasks = subTasksString ? JSON.parse(subTasksString) as string[] : undefined;
+
+  const files: File[] = [];
+  const fileEntries = formData.getAll('files');
+  for (const entry of fileEntries) {
+    if (entry instanceof File && entry.size > 0) {
+      files.push(entry);
+    }
+  }
+
+  await addTodoWithAttachments(user.id, {
+    name: name.trim(),
+    priority: priority || undefined,
+    dueDate: dueDate || undefined,
+    tags,
+    subTasks,
+  }, files);
   revalidatePath("/todos");
 }
 
