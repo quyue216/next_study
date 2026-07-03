@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Todo, Priority } from "../_lib/todo-service"
 import { Badge } from "@/components/ui/badge"
-import { Tag, Paperclip, Image as ImageIcon, X, FileImage } from "lucide-react"
+import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3 } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog"
 
 interface TodoItemProps {
   todo: Todo
   onToggle: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
+  onEdit: (todo: Todo) => void
   isPending?: boolean
 }
 
@@ -35,7 +36,7 @@ function isImageFile(mimeType?: string) {
   return mimeType?.startsWith('image/') ?? false
 }
 
-export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onEdit, isPending }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
@@ -160,14 +161,24 @@ export function TodoItem({ todo, onToggle, onDelete, isPending }: TodoItemProps)
           )}
         </td>
         <td className="p-2 align-middle">
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={isPending}
-            onClick={() => onDelete(todo.id)}
-          >
-            删除
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isPending}
+              onClick={() => onEdit(todo)}
+            >
+              <Edit3 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isPending}
+              onClick={() => onDelete(todo.id)}
+            >
+              删除
+            </Button>
+          </div>
         </td>
       </tr>
 

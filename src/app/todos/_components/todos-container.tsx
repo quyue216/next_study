@@ -1,13 +1,14 @@
 'use client'
 
 import { useOptimistic, useTransition, useState, useEffect } from 'react'
-import { Todo } from '../_lib/todo-service'
+import { Todo, Priority } from '../_lib/todo-service'
 import {
   createTodoClient,
   toggleTodoState,
   removeTodo,
   setAllTodosCompleted,
   removeAllTodos,
+  updateTodoDetails,
 } from '../actions'
 import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
@@ -19,11 +20,13 @@ import { Button } from '@/components/ui/button'
 import { Search, X } from 'lucide-react' //图标库
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { CreateTodoDialog } from './create-todo-dialog'
 
 type OptimisticAction =
   | { type: 'add'; tempTodo: Todo }
   | { type: 'toggle'; id: string; completed: boolean }
   | { type: 'delete'; id: string }
+  | { type: 'update'; id: string; data: Partial<Todo> }
   | { type: 'setAll'; completed: boolean }
   | { type: 'clear' }
 
@@ -41,6 +44,8 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(initialSearch || '')
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // 服务端传入新的 initialTodos 时同步更新真实状态
   useEffect(() => {
@@ -60,6 +65,10 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
           )
         case 'delete':
           return state.filter((t) => t.id !== action.id)
+        case 'update':
+          return state.map((t) =>
+            t.id === action.id ? { ...t, ...action.data } : t
+          )
         case 'setAll':
           return state.map((t) => ({ ...t, completed: action.completed }))
         case 'clear':
@@ -111,6 +120,36 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
         setDbTodos((prev) => prev.filter((t) => t.id !== id))
       } catch (err) {
         console.error('删除失败:', err)
+      }
+    })
+  }
+
+  const handleEdit = (todo: Todo) => {
+    setEditingTodo(todo)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdate = async (data: { name: string; priority?: Priority; dueDate?: string; tags?: string[] }) => {
+    if (!editingTodo) return
+
+    const updateData = {
+      name: data.name,
+      priority: data.priority,
+      dueDate: data.dueDate,
+      tags: data.tags,
+    }
+
+    startTransition(async () => {
+      addOptimisticAction({ type: 'update', id: editingTodo.id, data: updateData })
+      try {
+        await updateTodoDetails(editingTodo.id, updateData)
+        setDbTodos((prev) =>
+          prev.map((t) => (t.id === editingTodo.id ? { ...t, ...updateData } : t))
+        )
+        setIsEditDialogOpen(false)
+        setEditingTodo(null)
+      } catch (err) {
+        console.error('更新失败:', err)
       }
     })
   }
@@ -204,6 +243,7 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
         todos={optimisticTodos}
         onToggle={handleToggle}
         onDelete={handleDelete}
+        onEdit={handleEdit}
         isPending={isPending}
         isLoading={isLoading} // 传递 loading 状态
       />
@@ -232,6 +272,19 @@ export function TodosContainer({ initialTodos, userEmail, search: initialSearch,
           正在与服务器同步...
         </div>
       )}
+
+      {/* 编辑对话框 */}
+      <CreateTodoDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) {
+            setEditingTodo(null)
+          }
+        }}
+        todo={editingTodo}
+        onSubmit={handleUpdate}
+      />
     </div>
   )
 }
