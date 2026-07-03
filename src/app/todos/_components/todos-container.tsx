@@ -8,6 +8,10 @@ import {
   removeTodo,
   removeSelectedTodos,
   updateTodoDetails,
+  createSubTask,
+  removeSubTask,
+  removeAttachment,
+  uploadTodoAttachments,
 } from '../actions'
 import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
@@ -187,7 +191,16 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
     setIsEditDialogOpen(true)
   }
 
-  const handleUpdate = async (data: { name: string; priority?: Priority; dueDate?: string; tags?: string[] }) => {
+  const handleUpdate = async (data: {
+    name: string
+    priority?: Priority
+    dueDate?: string
+    tags?: string[]
+    newSubTasks?: string[]
+    deletedSubTaskIds?: string[]
+    newAttachments?: { file: File; previewUrl: string }[]
+    deletedAttachmentIds?: string[]
+  }) => {
     if (!editingTodo) return
 
     const updateData = {
@@ -200,7 +213,30 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
     startTransition(async () => {
       addOptimisticAction({ type: 'update', id: editingTodo.id, data: updateData })
       try {
+        // 1. 更新待办基本信息
         await updateTodoDetails(editingTodo.id, updateData)
+
+        // 2. 删除子任务
+        if (data.deletedSubTaskIds?.length) {
+          await Promise.all(data.deletedSubTaskIds.map(id => removeSubTask(id)))
+        }
+
+        // 3. 添加新子任务
+        if (data.newSubTasks?.length) {
+          await Promise.all(data.newSubTasks.map(name => createSubTask(editingTodo.id, name)))
+        }
+
+        // 4. 删除附件
+        if (data.deletedAttachmentIds?.length) {
+          await Promise.all(data.deletedAttachmentIds.map(id => removeAttachment(id)))
+        }
+
+        // 5. 上传新附件
+        if (data.newAttachments?.length) {
+          const files = data.newAttachments.map(a => a.file)
+          await uploadTodoAttachments(editingTodo.id, files)
+        }
+
         setDbTodos((prev) =>
           prev.map((t) => (t.id === editingTodo.id ? { ...t, ...updateData } : t))
         )
@@ -374,10 +410,10 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
 
           {/* 展开的筛选面板 */}
           {showFilters && (
-            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-end gap-4 flex-nowrap overflow-x-auto">
                 {/* 完成状态筛选 */}
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-[120px]">
                   <label className="text-sm text-muted-foreground">完成状态</label>
                   <Select value={completedFilter} onValueChange={setCompletedFilter}>
                     <SelectTrigger>
@@ -392,7 +428,7 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
                 </div>
 
                 {/* 截止日期起始 */}
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-[140px]">
                   <label className="text-sm text-muted-foreground">截止日期从</label>
                   <Input
                     type="date"
@@ -402,7 +438,7 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
                 </div>
 
                 {/* 截止日期结束 */}
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-[140px]">
                   <label className="text-sm text-muted-foreground">截止日期到</label>
                   <Input
                     type="date"
@@ -412,7 +448,7 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
                 </div>
 
                 {/* 标签筛选 */}
-                <div className="space-y-1">
+                <div className="space-y-1 min-w-[140px]">
                   <label className="text-sm text-muted-foreground">标签</label>
                   <Select value={selectedTag} onValueChange={setSelectedTag}>
                     <SelectTrigger>
@@ -426,15 +462,16 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={clearAllFilters}>
-                  重置
-                </Button>
-                <Button type="button" onClick={applyFilters}>
-                  应用筛选
-                </Button>
+                {/* 按钮组 */}
+                <div className="flex gap-2 ml-auto shrink-0">
+                  <Button type="button" variant="outline" onClick={clearAllFilters}>
+                    重置
+                  </Button>
+                  <Button type="button" onClick={applyFilters}>
+                    应用筛选
+                  </Button>
+                </div>
               </div>
             </div>
           )}

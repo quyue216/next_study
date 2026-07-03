@@ -30,7 +30,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px] text-center"></TableHead>
+            <TableHead className="w-[60px] text-center font-bold">序号</TableHead>
             <TableHead className="text-center">任务名称</TableHead>
             <TableHead className="w-[80px] text-center">优先级</TableHead>
             <TableHead className="w-[110px] text-center">状态</TableHead>
@@ -56,7 +56,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[50px] text-center"></TableHead>
+          <TableHead className="w-[60px] text-center font-bold">序号</TableHead>
           <TableHead className="w-[200px] text-center">任务名称</TableHead>
           <TableHead className="w-[80px] text-center">优先级</TableHead>
           <TableHead className="w-[120px] text-center">状态</TableHead>
@@ -75,10 +75,11 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
             </TableCell>
           </TableRow>
         ) : (
-          todos.map((todo) => (
+          todos.map((todo, index) => (
             <TodoItem
               key={todo.id}
               todo={todo}
+              index={index + 1}
               onToggle={onToggle}
               onDelete={onDelete}
               onEdit={onEdit}

@@ -164,7 +164,7 @@ function mapRow(row: Record<string, unknown>): Todo {
     createdAt: row.created_at,
     completed: row.completed,
     priority: row.priority as Priority,
-    dueDate: row.due_date,
+    dueDate: row.due_date ? String(row.due_date).substring(0, 10) : undefined,
     tags: row.tags as string[],
   }
 }

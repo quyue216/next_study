@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Plus, X, Trash2, FileUp, Loader2, Edit3, Paperclip, FileImage } from 'lucide-react'
 import { Priority, Todo, TodoAttachment, SubTask } from '../_lib/todo-service'
-import { createTodoWithDetailsAndAttachments, updateTodoDetails } from '../actions'
+import { createTodoWithDetailsAndAttachments, updateTodoDetails, createSubTask, removeSubTask, removeAttachment } from '../actions'
 
 interface Attachment {
   file: File
@@ -32,7 +32,16 @@ interface CreateTodoDialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   todo?: Todo | null  // 编辑模式时传入
-  onSubmit?: (data: { name: string, priority?: Priority, dueDate?: string, tags?: string[] }) => Promise<void>
+  onSubmit?: (data: {
+    name: string
+    priority?: Priority
+    dueDate?: string
+    tags?: string[]
+    newSubTasks?: string[]
+    deletedSubTaskIds?: string[]
+    newAttachments?: Attachment[]
+    deletedAttachmentIds?: string[]
+  }) => Promise<void>
 }
 
 export function CreateTodoDialog({
@@ -59,6 +68,8 @@ export function CreateTodoDialog({
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [existingAttachments, setExistingAttachments] = useState<TodoAttachment[]>([])
   const [existingSubTasks, setExistingSubTasks] = useState<SubTask[]>([])
+  const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>([])
+  const [deletedSubTaskIds, setDeletedSubTaskIds] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isEditMode = !!todo
@@ -89,6 +100,8 @@ export function CreateTodoDialog({
     setAttachments([])
     setExistingAttachments([])
     setExistingSubTasks([])
+    setDeletedAttachmentIds([])
+    setDeletedSubTaskIds([])
     setIsUploading(false)
   }, [])
 
@@ -164,6 +177,10 @@ export function CreateTodoDialog({
             priority: priority || undefined,
             dueDate: dueDate || undefined,
             tags: tags.length > 0 ? tags : undefined,
+            newSubTasks: subTasks.length > 0 ? subTasks : undefined,
+            deletedSubTaskIds: deletedSubTaskIds.length > 0 ? deletedSubTaskIds : undefined,
+            newAttachments: attachments.length > 0 ? attachments : undefined,
+            deletedAttachmentIds: deletedAttachmentIds.length > 0 ? deletedAttachmentIds : undefined,
           })
         } else {
           // 创建模式
@@ -319,10 +336,11 @@ export function CreateTodoDialog({
             <div className="grid gap-2">
               <Label>子任务</Label>
 
-              {/* 显示现有子任务（只读） */}
-              {isEditMode && existingSubTasks.length > 0 && (
-                <div className="grid gap-2 mb-2">
-                  {existingSubTasks.map((subTask) => (
+              {/* 编辑模式：显示现有子任务 + 新增子任务 */}
+              {isEditMode && (
+                <div className="grid gap-2">
+                  {/* 现有子任务（可删除） */}
+                  {existingSubTasks.filter(st => !deletedSubTaskIds.includes(st.id)).map((subTask) => (
                     <div
                       key={subTask.id}
                       className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
@@ -331,11 +349,61 @@ export function CreateTodoDialog({
                         <div className={`w-3 h-3 rounded-full border-2 ${subTask.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}></div>
                         <span className={`text-sm ${subTask.completed ? 'line-through text-muted-foreground' : ''}`}>{subTask.name}</span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setDeletedSubTaskIds(prev => [...prev, subTask.id])}
+                        disabled={isPending || isUploading}
+                        className="hover:text-destructive shrink-0"
+                      >
+                        <X className="size-4" />
+                      </button>
                     </div>
                   ))}
-                  <div className="text-xs text-muted-foreground mt-1">
-                    子任务编辑功能开发中...
+
+                  {/* 新增子任务输入框 */}
+                  <div className="flex gap-2">
+                    <Input
+                      value={subTaskInput}
+                      onChange={(e) => setSubTaskInput(e.target.value)}
+                      placeholder="输入新子任务"
+                      disabled={isPending || isUploading}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddSubTask()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddSubTask}
+                      disabled={!subTaskInput.trim() || isPending || isUploading}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
                   </div>
+
+                  {/* 新添加的子任务（可删除） */}
+                  {subTasks.length > 0 && (
+                    <div className="grid gap-2">
+                      {subTasks.map((subTask, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
+                        >
+                          <span className="text-sm">{subTask}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubTask(index)}
+                            disabled={isPending || isUploading}
+                            className="hover:text-destructive"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -387,38 +455,35 @@ export function CreateTodoDialog({
               )}
             </div>
 
-            {/* 附件 - 编辑模式显示现有附件 */}
+            {/* 附件 */}
             <div className="grid gap-2">
               <Label>附件</Label>
               <div className="grid gap-2">
-                {!isEditMode && (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      onChange={handleFileSelect}
-                      disabled={isPending || isUploading}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isPending || isUploading}
-                      className="w-full"
-                    >
-                      <FileUp className="size-4 mr-2" />
-                      上传文件
-                    </Button>
-                  </>
-                )}
+                {/* 上传按钮（所有模式都可用） */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  disabled={isPending || isUploading}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPending || isUploading}
+                  className="w-full"
+                >
+                  <FileUp className="size-4 mr-2" />
+                  上传文件
+                </Button>
 
-                {/* 显示现有附件（编辑模式） */}
-                {isEditMode && existingAttachments.length > 0 && (
+                {/* 显示现有附件（编辑模式，可删除） */}
+                {isEditMode && existingAttachments.filter(a => !deletedAttachmentIds.includes(a.id)).length > 0 && (
                   <div className="grid gap-2">
-                    {existingAttachments.map((attachment) => (
+                    {existingAttachments.filter(a => !deletedAttachmentIds.includes(a.id)).map((attachment) => (
                       <div
                         key={attachment.id}
                         className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
@@ -434,6 +499,14 @@ export function CreateTodoDialog({
                             ({formatFileSize(attachment.fileSize)})
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setDeletedAttachmentIds(prev => [...prev, attachment.id])}
+                          disabled={isPending || isUploading}
+                          className="hover:text-destructive shrink-0 ml-2"
+                        >
+                          <X className="size-4" />
+                        </button>
                       </div>
                     ))}
                   </div>

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui
 
 interface TodoItemProps {
   todo: Todo
+  index: number
   onToggle: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
   onEdit: (todo: Todo) => void
@@ -38,7 +39,7 @@ function isImageFile(mimeType?: string) {
   return mimeType?.startsWith('image/') ?? false
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
+export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
@@ -68,13 +69,16 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onToggleSelect, isS
           isPending && isTemp && "animate-pulse"
         )}
       >
-        {/* 选择框 */}
+        {/* 序号和选择框 */}
         <td className="p-2 align-middle text-center">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onToggleSelect?.(todo.id)}
-            disabled={isPending}
-          />
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-medium text-muted-foreground">{index}</span>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect?.(todo.id)}
+              disabled={isPending}
+            />
+          </div>
         </td>
 
         <td className={cn("p-2 align-middle text-center", todo.completed && "line-through text-muted-foreground")}>

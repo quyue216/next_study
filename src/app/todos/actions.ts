@@ -15,6 +15,9 @@ import {
   updateSubTask,
   deleteSubTask,
   addTodoWithAttachments,
+  deleteAttachment,
+  uploadAttachment,
+  addAttachment,
 } from "./_lib/todo-service";
 import { revalidatePath } from "next/cache";
 
@@ -175,6 +178,31 @@ export async function createTodoWithDetailsAndAttachments(formData: FormData) {
     tags,
     subTasks,
   }, files);
+  revalidatePath("/todos");
+}
+
+export async function removeAttachment(attachmentId: string) {
+  const user = await getCurrentUser();
+  if (!user || !attachmentId) return;
+
+  await deleteAttachment(attachmentId);
+  revalidatePath("/todos");
+}
+
+export async function uploadTodoAttachments(todoId: string, files: File[]) {
+  const user = await getCurrentUser();
+  if (!user || !todoId || files.length === 0) return;
+
+  for (const file of files) {
+    const attachmentData = await uploadAttachment(user.id, todoId, file);
+    await addAttachment(
+      todoId,
+      attachmentData.fileName,
+      attachmentData.fileUrl,
+      attachmentData.fileSize,
+      attachmentData.mimeType
+    );
+  }
   revalidatePath("/todos");
 }
 
