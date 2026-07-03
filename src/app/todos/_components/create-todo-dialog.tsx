@@ -194,16 +194,21 @@ export function CreateTodoDialog({
 
   return (
     <>
-      {trigger ? (
-        React.cloneElement(trigger as React.ReactElement, {
-          onClick: (e: React.MouseEvent) => {
-            const originalOnClick = (trigger as React.ReactElement).props.onClick;
-            if (originalOnClick) originalOnClick(e);
-            setOpen(true);
-          }
-        })
-      ) : (
-        <Button variant="secondary" onClick={() => setOpen(true)}>添加</Button>
+      {/* 只有在创建模式（非编辑模式）下才渲染触发按钮 */}
+      {!isEditMode && (
+        trigger ? (
+          React.cloneElement(trigger as React.ReactElement, {
+            onClick: (e: React.MouseEvent) => {
+              const originalOnClick = (trigger as React.ReactElement).props.onClick;
+              if (originalOnClick) originalOnClick(e);
+              setOpen(true);
+            }
+          })
+        ) : (
+          !isControlled && (
+            <Button variant="secondary" onClick={() => setOpen(true)}>添加</Button>
+          )
+        )
       )}
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" showCloseButton={false}>
