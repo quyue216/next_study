@@ -39,6 +39,36 @@ function isImageFile(mimeType?: string) {
   return mimeType?.startsWith('image/') ?? false
 }
 
+// 获取截止日期状态（逾期/今天到期/即将到期/正常）
+function getDueDateStatus(dueDate?: string, completed?: boolean): 'overdue' | 'today' | 'soon' | 'normal' | null {
+  if (!dueDate || completed) return null
+  const now = new Date()
+  const due = new Date(dueDate)
+  // 重置时间部分，只比较日期
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+  const diffDays = Math.ceil((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) return 'overdue'
+  if (diffDays === 0) return 'today'
+  if (diffDays <= 3) return 'soon'
+  return 'normal'
+}
+
+// 截止日期状态对应的样式
+function getDueDateStyle(status: ReturnType<typeof getDueDateStatus>) {
+  switch (status) {
+    case 'overdue':
+      return { className: 'text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-medium', label: '已逾期' }
+    case 'today':
+      return { className: 'text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium', label: '今天到期' }
+    case 'soon':
+      return { className: 'text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded font-medium', label: '即将到期' }
+    default:
+      return { className: 'text-blue-600', label: '' }
+  }
+}
+
 export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
@@ -54,6 +84,15 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
   const imageAttachments = todo.attachments?.filter(att => isImageFile(att.mimeType) && !imageErrors.has(att.id)) ?? []
   const hasAttachments = todo.attachments && todo.attachments.length > 0
   const hasTags = todo.tags && Array.isArray(todo.tags) && todo.tags.length > 0
+
+  // 子任务进度
+  const subTasks = todo.subTasks ?? []
+  const subTaskTotal = subTasks.length
+  const subTaskCompleted = subTasks.filter(st => st.completed).length
+  const subTaskPercent = subTaskTotal > 0 ? Math.round((subTaskCompleted / subTaskTotal) * 100) : 0
+
+  // 截止日期状态
+  const dueDateStatus = getDueDateStatus(todo.dueDate, todo.completed)
 
   const handleImageError = (id: string) => {
     setImageErrors(prev => new Set([...prev, id]))
@@ -113,8 +152,38 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
         </td>
         <td className="p-2 align-middle text-center">
           {todo.dueDate ? (
-            <div className="text-xs text-blue-600">
-              {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
+            <div className="space-y-1">
+              <div className={cn("text-xs", getDueDateStyle(dueDateStatus).className)}>
+                {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
+              </div>
+              {dueDateStatus && dueDateStatus !== 'normal' && (
+                <div className="text-[10px] text-red-500 font-medium">
+                  {getDueDateStyle(dueDateStatus).label}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          )}
+        </td>
+        {/* 子任务进度 */}
+        <td className="p-2 align-middle text-center">
+          {subTaskTotal > 0 ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-full max-w-[60px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      subTaskPercent === 100 ? "bg-green-500" : "bg-blue-500"
+                    )}
+                    style={{ width: `${subTaskPercent}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {subTaskCompleted}/{subTaskTotal}
+              </span>
             </div>
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
@@ -172,7 +241,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               {/* 附件数量 */}
               <Badge variant="outline" className="text-xs">
                 <Paperclip className="w-3 h-3 mr-1" />
-                {todo.attachments.length}
+                {todo.attachments!.length}
               </Badge>
             </div>
           )}

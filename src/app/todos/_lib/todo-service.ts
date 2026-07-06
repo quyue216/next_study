@@ -626,14 +626,30 @@ export async function addAttachment(
 
 export async function deleteAttachment(attachmentId: string): Promise<TodoAttachment[]> {
   const supabase = await createServerClient()
-  // 先查询附件所属的待办ID
+  // 先查询附件信息（所属待办ID和文件URL）
   const { data: attachmentData, error: getError } = await supabase
     .from("todo_attachments")
-    .select("todo_id")
+    .select("todo_id, file_url")
     .eq("id", attachmentId)
     .single()
 
   if (getError) throw getError
+
+  // 从公开URL中提取存储路径，删除Storage中的文件
+  if (attachmentData.file_url) {
+    try {
+      const url = new URL(attachmentData.file_url)
+      // Supabase公开URL格式: /storage/v1/object/public/<bucket>/<path>
+      const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/todo-attachments\/(.+)/)
+      if (pathMatch && pathMatch[1]) {
+        const filePath = decodeURIComponent(pathMatch[1])
+        await supabase.storage.from('todo-attachments').remove([filePath])
+      }
+    } catch (err) {
+      // 删除存储文件失败不阻塞DB删除，记录日志即可
+      console.error('[deleteAttachment] Error removing file from storage:', err)
+    }
+  }
 
   const { error } = await supabase
     .from("todo_attachments")
