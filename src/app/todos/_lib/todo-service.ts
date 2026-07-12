@@ -7,8 +7,14 @@ function generateUniqueFileName(originalName: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
   const ext = originalName.split('.').pop() || '';
-  const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-  return `${nameWithoutExt}-${timestamp}-${random}.${ext}`;
+  // 清理文件名：移除中文、空格和特殊字符，只保留字母数字和连字符
+  const sanitized = originalName
+    .replace(/\.[^.]+$/, '') // 去掉扩展名
+    .replace(/[^a-zA-Z0-9-]/g, '-') // 非字母数字的字符替换为连字符
+    .replace(/-+/g, '-') // 合并连续连字符
+    .replace(/^-|-$/g, '') // 去掉首尾连字符
+    .slice(0, 50); // 限制长度
+  return `${sanitized}-${timestamp}-${random}.${ext}`;
 }
 
 // 上传文件到 Supabase Storage
