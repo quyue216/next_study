@@ -8,6 +8,7 @@ import { Todo, Priority } from "../_lib/todo-service"
 import { Badge } from "@/components/ui/badge"
 import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3 } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { TableRow, TableCell } from "@/components/ui/table"
 
 interface TodoItemProps {
   todo: Todo
@@ -61,16 +62,15 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
 
   return (
     <>
-      <tr
+      <TableRow
         className={cn(
-          "border-b transition-colors hover:bg-muted/50",
           isSelected && "bg-blue-50 dark:bg-blue-950/20",
           isTemp && "bg-blue-50/50 dark:bg-blue-950/20",
           isPending && isTemp && "animate-pulse"
         )}
       >
         {/* 序号和选择框 */}
-        <td className="p-2 align-middle text-center">
+        <TableCell className="text-center">
           <div className="flex flex-col items-center gap-1">
             <span className="text-sm font-medium text-muted-foreground">{index}</span>
             <Checkbox
@@ -79,9 +79,9 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               disabled={isPending}
             />
           </div>
-        </td>
+        </TableCell>
 
-        <td className={cn("p-2 align-middle text-center", todo.completed && "line-through text-muted-foreground")}>
+        <TableCell className={cn("text-center", todo.completed && "line-through text-muted-foreground")}>
           <div className="font-medium">
             {todo.name}
             {isTemp && (
@@ -90,13 +90,13 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               </span>
             )}
           </div>
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           <Badge className={cn("font-normal inline-flex justify-center", priorityInfo.className)}>
             {priorityInfo.text}
           </Badge>
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           <div className="flex items-center justify-center gap-2">
             <Checkbox
               id={checkboxId}
@@ -110,8 +110,8 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               {todo.completed ? "已完成" : "未完成"}
             </label>
           </div>
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           {todo.dueDate ? (
             <div className="text-xs text-blue-600">
               {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
@@ -119,8 +119,8 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
           )}
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           {hasTags ? (
             <div className="flex items-center justify-center gap-1 flex-wrap">
               {todo.tags!.map((tag, index) => (
@@ -132,13 +132,13 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
           )}
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           <div className="text-xs text-muted-foreground">
             {createdAtText}
           </div>
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           {hasAttachments && (
             <div className="space-y-1">
               {/* 图片预览缩略图 */}
@@ -176,8 +176,8 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               </Badge>
             </div>
           )}
-        </td>
-        <td className="p-2 align-middle text-center">
+        </TableCell>
+        <TableCell className="text-center">
           <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
@@ -196,8 +196,8 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               删除
             </Button>
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
 
       {/* 图片预览对话框 */}
       {showImagePreview && (

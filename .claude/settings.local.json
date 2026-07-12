@@ -67,7 +67,8 @@
       "mcp__next_-_API_____read_project_oas_2tmcl6",
       "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\[todoId]\" -Recurse -Force)",
       "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\subtasks\" -Recurse -Force)",
-      "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\attachments\" -Recurse -Force)"
+      "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\attachments\" -Recurse -Force)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "enableAllProjectMcpServers": true,

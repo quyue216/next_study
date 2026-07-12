@@ -51,9 +51,13 @@ export function CreateTodoDialog({
   todo,
   onSubmit
 }: CreateTodoDialogProps) {
+  // 弹窗同时支持内部控制与外部控制
   const [internalOpen, setInternalOpen] = useState(false)
+
   const isControlled = controlledOpen !== undefined
+  
   const open = isControlled ? controlledOpen : internalOpen
+  
   const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen
 
   const [isPending, startTransition] = useTransition()

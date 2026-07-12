@@ -46,21 +46,20 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = parseInt(searchParams.get('pageSize') || '10')
     const search = searchParams.get('search') || undefined
-    const tag = searchParams.get('filterTag') || undefined
+    const completed = searchParams.get('completed')
+    const dueDateFrom = searchParams.get('dueDateFrom') || undefined
+    const dueDateTo = searchParams.get('dueDateTo') || undefined
+    const tag = searchParams.get('tag') || undefined
 
-    const result = await getTodosPaginated(user.id, page, pageSize, search)
-
-    if (tag) {
-      const filteredData = result.data.filter(todo =>
-        todo.tags && todo.tags.includes(tag)
-      )
-      return NextResponse.json({
-        ...result,
-        data: filteredData,
-        total: filteredData.length,
-        totalPages: Math.ceil(filteredData.length / pageSize)
-      })
+    const filters = {
+      search,
+      completed: completed !== null ? completed === 'true' : undefined,
+      dueDateFrom,
+      dueDateTo,
+      tag,
     }
+
+    const result = await getTodosPaginated(user.id, page, pageSize, filters)
 
     return NextResponse.json(result)
   } catch (error) {
