@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Todo, Priority } from "../_lib/todo-service"
 import { Badge } from "@/components/ui/badge"
-import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3 } from "lucide-react"
+import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3, GripVertical } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { TableRow, TableCell } from "@/components/ui/table"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 interface TodoItemProps {
   todo: Todo
@@ -19,6 +21,8 @@ interface TodoItemProps {
   onToggleSelect?: (id: string) => void
   isSelected?: boolean
   isPending?: boolean
+  isRemoving?: boolean
+  isDragging?: boolean
 }
 
 // 获取优先级的颜色和文本
@@ -40,11 +44,55 @@ function isImageFile(mimeType?: string) {
   return mimeType?.startsWith('image/') ?? false
 }
 
-export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
+// 获取截止日期状态（逾期/今天到期/即将到期/正常）
+function getDueDateStatus(dueDate?: string, completed?: boolean): 'overdue' | 'today' | 'soon' | 'normal' | null {
+  if (!dueDate || completed) return null
+  const now = new Date()
+  const due = new Date(dueDate)
+  // 重置时间部分，只比较日期
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+  const diffDays = Math.ceil((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) return 'overdue'
+  if (diffDays === 0) return 'today'
+  if (diffDays <= 3) return 'soon'
+  return 'normal'
+}
+
+// 截止日期状态对应的样式
+function getDueDateStyle(status: ReturnType<typeof getDueDateStatus>) {
+  switch (status) {
+    case 'overdue':
+      return { className: 'text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-medium', label: '已逾期' }
+    case 'today':
+      return { className: 'text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium', label: '今天到期' }
+    case 'soon':
+      return { className: 'text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded font-medium', label: '即将到期' }
+    default:
+      return { className: 'text-blue-600', label: '' }
+  }
+}
+
+export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending, isRemoving, isDragging }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: todo.id })
+
+  // 对 <tr> 不使用 transform (浏览器不支持)，使用 DragOverlay 模式
+  const style = {
+    transition,
+    opacity: isDragging ? 0.3 : undefined,
+  }
 
   useEffect(() => {
     setCreatedAtText(new Date(todo.createdAt).toLocaleString("zh-CN"))
@@ -56,6 +104,15 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
   const hasAttachments = todo.attachments && todo.attachments.length > 0
   const hasTags = todo.tags && Array.isArray(todo.tags) && todo.tags.length > 0
 
+  // 子任务进度
+  const subTasks = todo.subTasks ?? []
+  const subTaskTotal = subTasks.length
+  const subTaskCompleted = subTasks.filter(st => st.completed).length
+  const subTaskPercent = subTaskTotal > 0 ? Math.round((subTaskCompleted / subTaskTotal) * 100) : 0
+
+  // 截止日期状态
+  const dueDateStatus = getDueDateStatus(todo.dueDate, todo.completed)
+
   const handleImageError = (id: string) => {
     setImageErrors(prev => new Set([...prev, id]))
   }
@@ -63,14 +120,32 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
   return (
     <>
       <TableRow
+        ref={setNodeRef}
+        style={style}
         className={cn(
           isSelected && "bg-blue-50 dark:bg-blue-950/20",
-          isTemp && "bg-blue-50/50 dark:bg-blue-950/20",
-          isPending && isTemp && "animate-pulse"
+          isTemp && "bg-blue-50/50 dark:bg-blue-950/20 todo-row-enter",
+          isPending && isTemp && "animate-pulse",
+          isRemoving && "todo-row-exit",
+          isDragging && "opacity-30",
+          "todo-row-toggle"
         )}
       >
+        {/* 拖拽手柄 */}
+        <TableCell className="text-center p-0" data-label="">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-2 hover:text-foreground text-muted-foreground touch-none"
+            aria-label="拖拽排序"
+            tabIndex={-1}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        </TableCell>
+
         {/* 序号和选择框 */}
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="序号">
           <div className="flex flex-col items-center gap-1">
             <span className="text-sm font-medium text-muted-foreground">{index}</span>
             <Checkbox
@@ -81,7 +156,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           </div>
         </TableCell>
 
-        <TableCell className={cn("text-center", todo.completed && "line-through text-muted-foreground")}>
+        <TableCell className={cn("text-center", todo.completed && "line-through text-muted-foreground")} data-label="任务名称">
           <div className="font-medium">
             {todo.name}
             {isTemp && (
@@ -91,12 +166,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             )}
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden md:table-cell" data-label="优先级">
           <Badge className={cn("font-normal inline-flex justify-center", priorityInfo.className)}>
             {priorityInfo.text}
           </Badge>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="状态">
           <div className="flex items-center justify-center gap-2">
             <Checkbox
               id={checkboxId}
@@ -111,16 +186,46 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             </label>
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="截止时间">
           {todo.dueDate ? (
-            <div className="text-xs text-blue-600">
-              {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
+            <div className="space-y-1">
+              <div className={cn("text-xs", getDueDateStyle(dueDateStatus).className)}>
+                {new Date(todo.dueDate).toLocaleDateString("zh-CN")}
+              </div>
+              {dueDateStatus && dueDateStatus !== 'normal' && (
+                <div className="text-[10px] text-red-500 font-medium">
+                  {getDueDateStyle(dueDateStatus).label}
+                </div>
+              )}
             </div>
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        {/* 子任务进度 */}
+        <TableCell className="text-center hidden sm:table-cell" data-label="子任务">
+          {subTaskTotal > 0 ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-full max-w-[60px] h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      subTaskPercent === 100 ? "bg-green-500" : "bg-blue-500"
+                    )}
+                    style={{ width: `${subTaskPercent}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {subTaskCompleted}/{subTaskTotal}
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          )}
+        </TableCell>
+        <TableCell className="text-center hidden lg:table-cell" data-label="标签">
           {hasTags ? (
             <div className="flex items-center justify-center gap-1 flex-wrap">
               {todo.tags!.map((tag, index) => (
@@ -133,12 +238,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             <span className="text-xs text-muted-foreground">-</span>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden lg:table-cell" data-label="创建时间">
           <div className="text-xs text-muted-foreground">
             {createdAtText}
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden md:table-cell" data-label="附件">
           {hasAttachments && (
             <div className="space-y-1">
               {/* 图片预览缩略图 */}
@@ -172,12 +277,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               {/* 附件数量 */}
               <Badge variant="outline" className="text-xs">
                 <Paperclip className="w-3 h-3 mr-1" />
-                {todo.attachments.length}
+                {todo.attachments!.length}
               </Badge>
             </div>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="操作">
           <div className="flex gap-2 justify-center">
             <Button
               variant="outline"

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/app/auth/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function TodoHeader({
   email,
@@ -18,6 +19,7 @@ export function TodoHeader({
           {email && (
             <span className="text-sm text-muted-foreground">{email}</span>
           )}
+          <ThemeToggle />
           <form action={logoutAction}>
             <Button type="submit" variant="outline" size="sm">
               退出

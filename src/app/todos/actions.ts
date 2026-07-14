@@ -206,3 +206,20 @@ export async function uploadTodoAttachments(todoId: string, files: File[]) {
   revalidatePath("/todos");
 }
 
+export async function reorderTodos(orderedIds: string[]) {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  const supabase = await createServerClient();
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    await supabase
+      .from("todos")
+      .update({ sort_order: i })
+      .eq("id", orderedIds[i])
+      .eq("user_id", user.id);
+  }
+
+  revalidatePath("/todos");
+}
+

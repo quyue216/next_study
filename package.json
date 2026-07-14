@@ -8,11 +8,16 @@
     "start": "next start",
     "lint": "eslint",
     "link-next": "ln -s \"E:\\qy-task\\2026\\person\\学习\\next\" next || true",
-    "unlink-next": "rm -f next || true"
+    "unlink-next": "rm -f next || true",
+    "link-react": "ln -s \"E:\\qy-task\\2026\\person\\学习\\react\" react || true",
+    "unlink-react": "rm -f react || true"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
     "@base-ui/react": "^1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.4.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.106.2",

@@ -143,6 +143,7 @@ export interface Todo {
   tags?: string[]
   attachments?: TodoAttachment[]
   subTasks?: SubTask[]
+  sortOrder?: number
 }
 
 export interface SubTask {
@@ -172,6 +173,7 @@ function mapRow(row: Record<string, unknown>): Todo {
     priority: row.priority as Priority,
     dueDate: row.due_date ? String(row.due_date).substring(0, 10) : undefined,
     tags: row.tags as string[],
+    sortOrder: row.sort_order as number,
   }
 }
 
@@ -269,6 +271,7 @@ export async function getTodosPaginated(
   }
 
   const { data, error, count } = await query
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .range(from, to)
 
@@ -331,19 +334,35 @@ export interface CreateTodoData {
   subTasks?: string[] // 子任务名称列表
 }
 
+export async function getNextSortOrder(userId: string): Promise<number> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from("todos")
+    .select("sort_order")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return 0
+  return (data.sort_order ?? 0) + 1
+}
+
 export async function addTodo(userId: string, data: string | CreateTodoData): Promise<Todo[]> {
   const supabase = await createServerClient()
+  const nextSortOrder = await getNextSortOrder(userId)
 
   // 1. 准备主任务数据
   const todoData = typeof data === 'string'
-    ? { name: data, completed: false, user_id: userId }
+    ? { name: data, completed: false, user_id: userId, sort_order: nextSortOrder }
     : {
         name: data.name,
         completed: false,
         user_id: userId,
         priority: data.priority,
         due_date: data.dueDate,
-        tags: data.tags
+        tags: data.tags,
+        sort_order: nextSortOrder,
       }
 
   // 2. 提取子任务数据
@@ -632,14 +651,30 @@ export async function addAttachment(
 
 export async function deleteAttachment(attachmentId: string): Promise<TodoAttachment[]> {
   const supabase = await createServerClient()
-  // 先查询附件所属的待办ID
+  // 先查询附件信息（所属待办ID和文件URL）
   const { data: attachmentData, error: getError } = await supabase
     .from("todo_attachments")
-    .select("todo_id")
+    .select("todo_id, file_url")
     .eq("id", attachmentId)
     .single()
 
   if (getError) throw getError
+
+  // 从公开URL中提取存储路径，删除Storage中的文件
+  if (attachmentData.file_url) {
+    try {
+      const url = new URL(attachmentData.file_url)
+      // Supabase公开URL格式: /storage/v1/object/public/<bucket>/<path>
+      const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/todo-attachments\/(.+)/)
+      if (pathMatch && pathMatch[1]) {
+        const filePath = decodeURIComponent(pathMatch[1])
+        await supabase.storage.from('todo-attachments').remove([filePath])
+      }
+    } catch (err) {
+      // 删除存储文件失败不阻塞DB删除，记录日志即可
+      console.error('[deleteAttachment] Error removing file from storage:', err)
+    }
+  }
 
   const { error } = await supabase
     .from("todo_attachments")

@@ -20,11 +20,25 @@ import {
 } from "@/components/ui/select"
 import { Plus, X, Trash2, FileUp, Loader2, Edit3, Paperclip, FileImage } from 'lucide-react'
 import { Priority, Todo, TodoAttachment, SubTask } from '../_lib/todo-service'
-import { createTodoWithDetailsAndAttachments, updateTodoDetails, createSubTask, removeSubTask, removeAttachment } from '../actions'
+import { createTodoWithDetailsAndAttachments, updateTodoDetails, createSubTask, removeSubTask, removeAttachment, updateSubTaskState } from '../actions'
+import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 
 interface Attachment {
   file: File
-  previewUrl: string
+}
+
+// 优先级中英文映射，解决 Select 组件显示英文原始值的问题
+type PriorityLabel = '低' | '中' | '高'
+const PRIORITY_TO_LABEL: Record<Priority, PriorityLabel> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+}
+const LABEL_TO_PRIORITY: Record<string, Priority> = {
+  '低': 'low',
+  '中': 'medium',
+  '高': 'high',
 }
 
 interface CreateTodoDialogProps {
@@ -63,7 +77,7 @@ export function CreateTodoDialog({
   const [isPending, startTransition] = useTransition()
   const [isUploading, setIsUploading] = useState(false)
   const [name, setName] = useState('')
-  const [priority, setPriority] = useState<Priority | ''>('')
+  const [priority, setPriority] = useState<PriorityLabel | ''>('')
   const [dueDate, setDueDate] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -74,6 +88,7 @@ export function CreateTodoDialog({
   const [existingSubTasks, setExistingSubTasks] = useState<SubTask[]>([])
   const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>([])
   const [deletedSubTaskIds, setDeletedSubTaskIds] = useState<string[]>([])
+  const [toggledSubTaskIds, setToggledSubTaskIds] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isEditMode = !!todo
@@ -84,7 +99,7 @@ export function CreateTodoDialog({
   useEffect(() => {
     if (todo) {
       setName(todo.name)
-      setPriority(todo.priority || '')
+      setPriority(todo.priority ? PRIORITY_TO_LABEL[todo.priority] : '')
       setDueDate(todo.dueDate || '')
       setTags(todo.tags || [])
       setExistingAttachments(todo.attachments || [])
@@ -106,6 +121,7 @@ export function CreateTodoDialog({
     setExistingSubTasks([])
     setDeletedAttachmentIds([])
     setDeletedSubTaskIds([])
+    setToggledSubTaskIds(new Set())
     setIsUploading(false)
   }, [])
 
@@ -144,7 +160,6 @@ export function CreateTodoDialog({
 
     const newAttachments: Attachment[] = files.map(file => ({
       file,
-      previewUrl: URL.createObjectURL(file),
     }))
 
     setAttachments(prev => [...prev, ...newAttachments])
@@ -157,7 +172,6 @@ export function CreateTodoDialog({
   const handleRemoveAttachment = useCallback((index: number) => {
     setAttachments(prev => {
       const newAttachments = [...prev]
-      URL.revokeObjectURL(newAttachments[index].previewUrl)
       newAttachments.splice(index, 1)
       return newAttachments
     })
@@ -175,10 +189,18 @@ export function CreateTodoDialog({
       setIsUploading(true)
       try {
         if (isEditMode && onSubmit) {
-          // 编辑模式
+          // 编辑模式：先切换子任务状态
+          if (toggledSubTaskIds.size > 0) {
+            await Promise.all(
+              Array.from(toggledSubTaskIds).map(subTaskId => {
+                const subTask = existingSubTasks.find(st => st.id === subTaskId)
+                return updateSubTaskState(subTaskId, undefined, subTask ? !subTask.completed : undefined)
+              })
+            )
+          }
           await onSubmit({
             name: name.trim(),
-            priority: priority || undefined,
+            priority: priority ? LABEL_TO_PRIORITY[priority] : undefined,
             dueDate: dueDate || undefined,
             tags: tags.length > 0 ? tags : undefined,
             newSubTasks: subTasks.length > 0 ? subTasks : undefined,
@@ -190,7 +212,7 @@ export function CreateTodoDialog({
           // 创建模式
           const formData = new FormData()
           formData.append('name', name.trim())
-          if (priority) formData.append('priority', priority)
+          if (priority) formData.append('priority', LABEL_TO_PRIORITY[priority])
           if (dueDate) formData.append('dueDate', dueDate)
           if (tags.length > 0) formData.append('tags', JSON.stringify(tags))
           if (subTasks.length > 0) formData.append('subTasks', JSON.stringify(subTasks))
@@ -200,15 +222,19 @@ export function CreateTodoDialog({
           }
 
           await createTodoWithDetailsAndAttachments(formData)
+          toast.success('任务已创建')
         }
         // 成功后关闭对话框并重置表单
         setOpen(false)
         setTimeout(resetForm, 100)
+      } catch (err) {
+        toast.error(isEditMode ? '保存失败，请重试' : '创建失败，请重试')
+        console.error('提交失败:', err)
       } finally {
         setIsUploading(false)
       }
     })
-  }, [name, priority, dueDate, tags, subTasks, attachments, isEditMode, onSubmit, setOpen, resetForm])
+  }, [name, priority, dueDate, tags, subTasks, attachments, isEditMode, onSubmit, setOpen, resetForm, toggledSubTaskIds, existingSubTasks, deletedSubTaskIds, deletedAttachmentIds])
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -263,16 +289,16 @@ export function CreateTodoDialog({
                 <Label htmlFor="priority">优先级</Label>
                 <Select
                   value={priority}
-                  onValueChange={(value) => setPriority(value as Priority)}
+                  onValueChange={(value) => setPriority(value as PriorityLabel)}
                   disabled={isPending || isUploading}
                 >
                   <SelectTrigger id="priority">
                     <SelectValue placeholder="请选择优先级" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">低</SelectItem>
-                    <SelectItem value="medium">中</SelectItem>
-                    <SelectItem value="high">高</SelectItem>
+                    <SelectItem value="低">低</SelectItem>
+                    <SelectItem value="中">中</SelectItem>
+                    <SelectItem value="高">高</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -343,15 +369,37 @@ export function CreateTodoDialog({
               {/* 编辑模式：显示现有子任务 + 新增子任务 */}
               {isEditMode && (
                 <div className="grid gap-2">
-                  {/* 现有子任务（可删除） */}
-                  {existingSubTasks.filter(st => !deletedSubTaskIds.includes(st.id)).map((subTask) => (
+                  {/* 现有子任务（可切换完成状态、可删除） */}
+                  {existingSubTasks.filter(st => !deletedSubTaskIds.includes(st.id)).map((subTask) => {
+                    /* 
+                    1. 记录谁被改过，数据需要同步到服务端
+                    2. 乐观更新
+                    */
+                    const isToggled = toggledSubTaskIds.has(subTask.id) 
+
+                    const displayCompleted = isToggled ? !subTask.completed : subTask.completed
+                    return (
                     <div
                       key={subTask.id}
                       className="flex items-center justify-between px-3 py-2 bg-muted rounded-md"
                     >
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full border-2 ${subTask.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'}`}></div>
-                        <span className={`text-sm ${subTask.completed ? 'line-through text-muted-foreground' : ''}`}>{subTask.name}</span>
+                        <Checkbox
+                          checked={displayCompleted}
+                          onCheckedChange={() => {
+                            setToggledSubTaskIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(subTask.id)) {
+                                next.delete(subTask.id)
+                              } else {
+                                next.add(subTask.id)
+                              }
+                              return next
+                            })
+                          }}
+                          disabled={isPending || isUploading}
+                        />
+                        <span className={`text-sm ${displayCompleted ? 'line-through text-muted-foreground' : ''}`}>{subTask.name}</span>
                       </div>
                       <button
                         type="button"
@@ -362,7 +410,7 @@ export function CreateTodoDialog({
                         <X className="size-4" />
                       </button>
                     </div>
-                  ))}
+                  )})}
 
                   {/* 新增子任务输入框 */}
                   <div className="flex gap-2">
