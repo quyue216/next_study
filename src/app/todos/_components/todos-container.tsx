@@ -12,6 +12,7 @@ import {
   removeSubTask,
   removeAttachment,
   uploadTodoAttachments,
+  reorderTodos,
 } from '../actions'
 import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
@@ -24,6 +25,7 @@ import { Search, X, Filter, Trash2, CheckSquare, Square } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { CreateTodoDialog } from './create-todo-dialog'
+import { toast } from 'sonner'
 
 type OptimisticAction =
   | { type: 'add'; tempTodo: Todo }
@@ -33,6 +35,7 @@ type OptimisticAction =
   | { type: 'update'; id: string; data: Partial<Todo> }
   | { type: 'setAll'; completed: boolean }
   | { type: 'clear' }
+  | { type: 'reorder'; orderedIds: string[] }
 
 interface TodosContainerProps {
   initialTodos: Todo[]
@@ -65,6 +68,8 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
 
   // 选中状态
   const [selectedTodoIds, setSelectedTodoIds] = useState<Set<string>>(new Set())
+  // 删除动画中
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
 
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -97,6 +102,12 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
           return state.map((t) => ({ ...t, completed: action.completed }))
         case 'clear':
           return []
+        case 'reorder': {
+          const idToTodo = new Map(state.map(t => [t.id, t]))
+          return action.orderedIds
+            .map(id => idToTodo.get(id))
+            .filter((t): t is Todo => t !== undefined)
+        }
         default:
           return state
       }
@@ -115,7 +126,9 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
       addOptimisticAction({ type: 'add', tempTodo })
       try {
         await createTodoClient(name)
+        toast.success('任务已创建')
       } catch (err) {
+        toast.error('创建失败，请重试')
         console.error('添加失败:', err)
       }
     })
@@ -130,21 +143,38 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
           prev.map((t) => (t.id === id ? { ...t, completed } : t))
         )
       } catch (err) {
+        toast.error('操作失败，请重试')
         console.error('切换状态失败:', err)
       }
     })
   }
 
   const handleDelete = (id: string) => {
-    startTransition(async () => {
-      addOptimisticAction({ type: 'delete', id })
-      try {
-        await removeTodo(id)
-        setDbTodos((prev) => prev.filter((t) => t.id !== id))
-      } catch (err) {
-        console.error('删除失败:', err)
-      }
-    })
+    // 先触发退出动画
+    setRemovingIds(prev => new Set(prev).add(id))
+    setTimeout(() => {
+      startTransition(async () => {
+        addOptimisticAction({ type: 'delete', id })
+        try {
+          await removeTodo(id)
+          setDbTodos((prev) => prev.filter((t) => t.id !== id))
+          setRemovingIds(prev => {
+            const next = new Set(prev)
+            next.delete(id)
+            return next
+          })
+          toast.success('任务已删除')
+        } catch (err) {
+          setRemovingIds(prev => {
+            const next = new Set(prev)
+            next.delete(id)
+            return next
+          })
+          toast.error('删除失败，请重试')
+          console.error('删除失败:', err)
+        }
+      })
+    }, 200)
   }
 
   // 选择处理
@@ -180,8 +210,22 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         await removeSelectedTodos(idsToDelete)
         setDbTodos((prev) => prev.filter(t => !idsToDelete.includes(t.id)))
         setSelectedTodoIds(new Set())
+        toast.success(`已删除 ${idsToDelete.length} 个任务`)
       } catch (err) {
+        toast.error('批量删除失败，请重试')
         console.error('批量删除失败:', err)
+      }
+    })
+  }
+
+  const handleReorder = (orderedIds: string[]) => {
+    startTransition(async () => {
+      addOptimisticAction({ type: 'reorder', orderedIds })
+      try {
+        await reorderTodos(orderedIds)
+      } catch (err) {
+        toast.error('排序失败，请重试')
+        console.error('排序失败:', err)
       }
     })
   }
@@ -242,7 +286,9 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         )
         setIsEditDialogOpen(false)
         setEditingTodo(null)
+        toast.success('任务已更新')
       } catch (err) {
+        toast.error('更新失败，请重试')
         console.error('更新失败:', err)
       }
     })
@@ -329,8 +375,8 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
       <TodoHeader email={userEmail}>
         <div className="space-y-3">
           {/* 顶部搜索和添加按钮容器 */}
-          <div className="flex gap-2 items-center justify-between">
-            <div className="flex gap-2 flex-1 max-w-3xl items-center">
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+            <div className="flex gap-2 flex-1 max-w-3xl items-center flex-wrap">
               {/* 全选/删除选中按钮组 */}
               <div className="flex gap-2 mr-4">
                 <Button
@@ -485,6 +531,8 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         onEdit={handleEdit}
         onToggleSelect={handleToggleSelect}
         selectedIds={selectedTodoIds}
+        removingIds={removingIds}
+        onReorder={handleReorder}
         isPending={isPending}
         isLoading={isLoading}
       />

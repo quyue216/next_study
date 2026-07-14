@@ -39,7 +39,7 @@ export default async function Todos({ searchParams }: PageProps) {
   const allTags = await getTagsByUser(data.user.id);
 
   return (
-    <div className="mx-auto min-w-3xl p-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
       <TodosWrapper
         initialTodos={paginatedTodos.data}
         userEmail={data.user.email}

@@ -22,10 +22,10 @@ import { Plus, X, Trash2, FileUp, Loader2, Edit3, Paperclip, FileImage } from 'l
 import { Priority, Todo, TodoAttachment, SubTask } from '../_lib/todo-service'
 import { createTodoWithDetailsAndAttachments, updateTodoDetails, createSubTask, removeSubTask, removeAttachment, updateSubTaskState } from '../actions'
 import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 
 interface Attachment {
   file: File
-  previewUrl: string
 }
 
 // 优先级中英文映射，解决 Select 组件显示英文原始值的问题
@@ -160,7 +160,6 @@ export function CreateTodoDialog({
 
     const newAttachments: Attachment[] = files.map(file => ({
       file,
-      previewUrl: URL.createObjectURL(file),
     }))
 
     setAttachments(prev => [...prev, ...newAttachments])
@@ -173,7 +172,6 @@ export function CreateTodoDialog({
   const handleRemoveAttachment = useCallback((index: number) => {
     setAttachments(prev => {
       const newAttachments = [...prev]
-      URL.revokeObjectURL(newAttachments[index].previewUrl)
       newAttachments.splice(index, 1)
       return newAttachments
     })
@@ -224,10 +222,14 @@ export function CreateTodoDialog({
           }
 
           await createTodoWithDetailsAndAttachments(formData)
+          toast.success('任务已创建')
         }
         // 成功后关闭对话框并重置表单
         setOpen(false)
         setTimeout(resetForm, 100)
+      } catch (err) {
+        toast.error(isEditMode ? '保存失败，请重试' : '创建失败，请重试')
+        console.error('提交失败:', err)
       } finally {
         setIsUploading(false)
       }
@@ -369,7 +371,12 @@ export function CreateTodoDialog({
                 <div className="grid gap-2">
                   {/* 现有子任务（可切换完成状态、可删除） */}
                   {existingSubTasks.filter(st => !deletedSubTaskIds.includes(st.id)).map((subTask) => {
-                    const isToggled = toggledSubTaskIds.has(subTask.id)
+                    /* 
+                    1. 记录谁被改过，数据需要同步到服务端
+                    2. 乐观更新
+                    */
+                    const isToggled = toggledSubTaskIds.has(subTask.id) 
+
                     const displayCompleted = isToggled ? !subTask.completed : subTask.completed
                     return (
                     <div

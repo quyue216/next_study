@@ -143,6 +143,7 @@ export interface Todo {
   tags?: string[]
   attachments?: TodoAttachment[]
   subTasks?: SubTask[]
+  sortOrder?: number
 }
 
 export interface SubTask {
@@ -172,6 +173,7 @@ function mapRow(row: Record<string, unknown>): Todo {
     priority: row.priority as Priority,
     dueDate: row.due_date ? String(row.due_date).substring(0, 10) : undefined,
     tags: row.tags as string[],
+    sortOrder: row.sort_order as number,
   }
 }
 
@@ -269,6 +271,7 @@ export async function getTodosPaginated(
   }
 
   const { data, error, count } = await query
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false })
     .range(from, to)
 
@@ -331,19 +334,35 @@ export interface CreateTodoData {
   subTasks?: string[] // 子任务名称列表
 }
 
+export async function getNextSortOrder(userId: string): Promise<number> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from("todos")
+    .select("sort_order")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return 0
+  return (data.sort_order ?? 0) + 1
+}
+
 export async function addTodo(userId: string, data: string | CreateTodoData): Promise<Todo[]> {
   const supabase = await createServerClient()
+  const nextSortOrder = await getNextSortOrder(userId)
 
   // 1. 准备主任务数据
   const todoData = typeof data === 'string'
-    ? { name: data, completed: false, user_id: userId }
+    ? { name: data, completed: false, user_id: userId, sort_order: nextSortOrder }
     : {
         name: data.name,
         completed: false,
         user_id: userId,
         priority: data.priority,
         due_date: data.dueDate,
-        tags: data.tags
+        tags: data.tags,
+        sort_order: nextSortOrder,
       }
 
   // 2. 提取子任务数据

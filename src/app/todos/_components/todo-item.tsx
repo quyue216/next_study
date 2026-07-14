@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Todo, Priority } from "../_lib/todo-service"
 import { Badge } from "@/components/ui/badge"
-import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3 } from "lucide-react"
+import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3, GripVertical } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { TableRow, TableCell } from "@/components/ui/table"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 interface TodoItemProps {
   todo: Todo
@@ -19,6 +21,8 @@ interface TodoItemProps {
   onToggleSelect?: (id: string) => void
   isSelected?: boolean
   isPending?: boolean
+  isRemoving?: boolean
+  isDragging?: boolean
 }
 
 // 获取优先级的颜色和文本
@@ -70,11 +74,25 @@ function getDueDateStyle(status: ReturnType<typeof getDueDateStatus>) {
   }
 }
 
-export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending }: TodoItemProps) {
+export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending, isRemoving, isDragging }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: todo.id })
+
+  // 对 <tr> 不使用 transform (浏览器不支持)，使用 DragOverlay 模式
+  const style = {
+    transition,
+    opacity: isDragging ? 0.3 : undefined,
+  }
 
   useEffect(() => {
     setCreatedAtText(new Date(todo.createdAt).toLocaleString("zh-CN"))
@@ -102,14 +120,32 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
   return (
     <>
       <TableRow
+        ref={setNodeRef}
+        style={style}
         className={cn(
           isSelected && "bg-blue-50 dark:bg-blue-950/20",
-          isTemp && "bg-blue-50/50 dark:bg-blue-950/20",
-          isPending && isTemp && "animate-pulse"
+          isTemp && "bg-blue-50/50 dark:bg-blue-950/20 todo-row-enter",
+          isPending && isTemp && "animate-pulse",
+          isRemoving && "todo-row-exit",
+          isDragging && "opacity-30",
+          "todo-row-toggle"
         )}
       >
+        {/* 拖拽手柄 */}
+        <TableCell className="text-center p-0" data-label="">
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-2 hover:text-foreground text-muted-foreground touch-none"
+            aria-label="拖拽排序"
+            tabIndex={-1}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        </TableCell>
+
         {/* 序号和选择框 */}
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="序号">
           <div className="flex flex-col items-center gap-1">
             <span className="text-sm font-medium text-muted-foreground">{index}</span>
             <Checkbox
@@ -120,7 +156,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           </div>
         </TableCell>
 
-        <TableCell className={cn("text-center", todo.completed && "line-through text-muted-foreground")}>
+        <TableCell className={cn("text-center", todo.completed && "line-through text-muted-foreground")} data-label="任务名称">
           <div className="font-medium">
             {todo.name}
             {isTemp && (
@@ -130,12 +166,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             )}
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden md:table-cell" data-label="优先级">
           <Badge className={cn("font-normal inline-flex justify-center", priorityInfo.className)}>
             {priorityInfo.text}
           </Badge>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="状态">
           <div className="flex items-center justify-center gap-2">
             <Checkbox
               id={checkboxId}
@@ -150,7 +186,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             </label>
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="截止时间">
           {todo.dueDate ? (
             <div className="space-y-1">
               <div className={cn("text-xs", getDueDateStyle(dueDateStatus).className)}>
@@ -165,9 +201,9 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
           )}
-        </td>
+        </TableCell>
         {/* 子任务进度 */}
-        <td className="p-2 align-middle text-center">
+        <TableCell className="text-center hidden sm:table-cell" data-label="子任务">
           {subTaskTotal > 0 ? (
             <div className="space-y-1">
               <div className="flex items-center justify-center gap-1">
@@ -189,7 +225,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             <span className="text-xs text-muted-foreground">-</span>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden lg:table-cell" data-label="标签">
           {hasTags ? (
             <div className="flex items-center justify-center gap-1 flex-wrap">
               {todo.tags!.map((tag, index) => (
@@ -202,12 +238,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             <span className="text-xs text-muted-foreground">-</span>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden lg:table-cell" data-label="创建时间">
           <div className="text-xs text-muted-foreground">
             {createdAtText}
           </div>
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center hidden md:table-cell" data-label="附件">
           {hasAttachments && (
             <div className="space-y-1">
               {/* 图片预览缩略图 */}
@@ -246,7 +282,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
             </div>
           )}
         </TableCell>
-        <TableCell className="text-center">
+        <TableCell className="text-center" data-label="操作">
           <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
