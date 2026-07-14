@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Todo, Priority } from "../_lib/todo-service"
 import { Badge } from "@/components/ui/badge"
-import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3, GripVertical } from "lucide-react"
+import { Tag, Paperclip, Image as ImageIcon, X, FileImage, Edit3, GripVertical, AlertTriangle } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
 
 interface TodoItemProps {
   todo: Todo
@@ -23,6 +22,7 @@ interface TodoItemProps {
   isPending?: boolean
   isRemoving?: boolean
   isDragging?: boolean
+  isOver?: boolean
 }
 
 // 获取优先级的颜色和文本
@@ -74,17 +74,17 @@ function getDueDateStyle(status: ReturnType<typeof getDueDateStatus>) {
   }
 }
 
-export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending, isRemoving, isDragging }: TodoItemProps) {
+export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSelect, isSelected, isPending, isRemoving, isDragging, isOver }: TodoItemProps) {
   const checkboxId = useId()
   const [createdAtText, setCreatedAtText] = useState("")
   const [showImagePreview, setShowImagePreview] = useState<string | null>(null)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const {
     attributes,
     listeners,
     setNodeRef,
-    transform,
     transition,
   } = useSortable({ id: todo.id })
 
@@ -123,11 +123,13 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
         ref={setNodeRef}
         style={style}
         className={cn(
+          "transition-all duration-200",
           isSelected && "bg-blue-50 dark:bg-blue-950/20",
           isTemp && "bg-blue-50/50 dark:bg-blue-950/20 todo-row-enter",
           isPending && isTemp && "animate-pulse",
           isRemoving && "todo-row-exit",
-          isDragging && "opacity-30",
+          isDragging && "opacity-30 relative z-0",
+          isOver && "ring-2 ring-primary ring-inset bg-primary/5 shadow-[inset_0_0_0_1px] shadow-primary/30",
           "todo-row-toggle"
         )}
       >
@@ -136,7 +138,12 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-2 hover:text-foreground text-muted-foreground touch-none"
+            className={cn(
+              "cursor-grab active:cursor-grabbing p-2 text-muted-foreground touch-none",
+              "rounded-md transition-colors duration-150",
+              "hover:bg-muted hover:text-foreground",
+              isDragging && "text-primary"
+            )}
             aria-label="拖拽排序"
             tabIndex={-1}
           >
@@ -296,7 +303,7 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
               variant="destructive"
               size="sm"
               disabled={isPending}
-              onClick={() => onDelete(todo.id)}
+              onClick={() => setShowDeleteConfirm(true)}
             >
               删除
             </Button>
@@ -324,6 +331,36 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
           </DialogContent>
         </Dialog>
       )}
+
+      {/* 删除确认对话框 */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="size-5 text-destructive" />
+            确认删除
+          </DialogTitle>
+          <div className="py-2">
+            <p className="text-muted-foreground">
+              确定要删除任务 <span className="font-medium text-foreground">"{todo.name}"</span> 吗？此操作不可撤销。
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isPending}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDelete(todo.id)
+                setShowDeleteConfirm(false)
+              }}
+              disabled={isPending}
+            >
+              确认删除
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

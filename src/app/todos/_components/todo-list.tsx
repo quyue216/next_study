@@ -1,14 +1,16 @@
 "use client"
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
 import {
@@ -25,8 +27,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TodoItem } from "./todo-item"
-import { Todo } from "../_lib/todo-service"
+import { Todo, Priority } from "../_lib/todo-service"
 import { TodoListLoading } from "./todo-list-loading"
+import { Badge } from "@/components/ui/badge"
+import { GripVertical } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+function getDragOverlayPriorityStyle(priority?: Priority) {
+  switch (priority) {
+    case 'low': return 'text-green-600 border-green-200 bg-green-50'
+    case 'medium': return 'text-yellow-600 border-yellow-200 bg-yellow-50'
+    case 'high': return 'text-red-600 border-red-200 bg-red-50'
+    default: return 'text-gray-400'
+  }
+}
 
 interface TodoListProps {
   todos: Todo[]
@@ -43,6 +57,7 @@ interface TodoListProps {
 
 export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, selectedIds, removingIds, onReorder, isPending, isLoading = false }: TodoListProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -59,8 +74,13 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
     setActiveId(event.active.id as string)
   }, [])
 
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setOverId(event.over?.id as string ?? null)
+  }, [])
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveId(null)
+    setOverId(null)
     const { active, over } = event
 
     if (!over || active.id === over.id) return
@@ -79,9 +99,14 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null)
+    setOverId(null)
   }, [])
 
   const todoIds = todos.map(t => t.id)
+
+  const activeTodo = useMemo(() => {
+    return activeId ? todos.find(t => t.id === activeId) : null
+  }, [activeId, todos])
 
   // 如果正在加载，显示骨架屏
   if (isLoading) {
@@ -118,6 +143,7 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -159,12 +185,31 @@ export function TodoList({ todos, onToggle, onDelete, onEdit, onToggleSelect, se
                   isPending={isPending}
                   isRemoving={removingIds?.has(todo.id)}
                   isDragging={activeId === todo.id}
+                  isOver={overId === todo.id && activeId !== todo.id}
                 />
               ))
             )}
           </SortableContext>
         </TableBody>
       </Table>
+      <DragOverlay
+        dropAnimation={{
+          duration: 250,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+        }}
+      >
+        {activeTodo ? (
+          <div className="bg-background border-2 border-primary rounded-lg shadow-2xl px-4 py-3 flex items-center gap-3 opacity-95 scale-[1.02] cursor-grabbing">
+            <GripVertical className="size-4 text-primary shrink-0" />
+            <span className="font-medium truncate">{activeTodo.name}</span>
+            {activeTodo.priority && (
+              <Badge className={cn("font-normal text-xs shrink-0", getDragOverlayPriorityStyle(activeTodo.priority))}>
+                {activeTodo.priority === 'low' ? '低' : activeTodo.priority === 'medium' ? '中' : '高'}
+              </Badge>
+            )}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   )
 }
