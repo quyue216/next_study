@@ -16,6 +16,10 @@ interface UseRealtimeTodosOptions {
 export function useRealtimeTodos({ userId, onRemoteChange }: UseRealtimeTodosOptions) {
   const pendingMutationIds = useRef<Set<string>>(new Set())
   const [isConnected, setIsConnected] = useState(false)
+  const onRemoteChangeRef = useRef(onRemoteChange)
+
+  // 保持回调引用最新，避免 Effect 依赖变化导致无限循环
+  onRemoteChangeRef.current = onRemoteChange
 
   const markPending = (id: string) => {
     pendingMutationIds.current.add(id)
@@ -44,13 +48,13 @@ export function useRealtimeTodos({ userId, onRemoteChange }: UseRealtimeTodosOpt
           }
 
           if (eventType === "DELETE") {
-            onRemoteChange({
+            onRemoteChangeRef.current({
               type: "DELETE",
               todo: null,
               oldRecord: oldRecord as Record<string, unknown>,
             })
           } else {
-            onRemoteChange({
+            onRemoteChangeRef.current({
               type: eventType as "INSERT" | "UPDATE",
               todo: mapRealtimeRow(newRecord as Record<string, unknown>),
             })
@@ -64,7 +68,7 @@ export function useRealtimeTodos({ userId, onRemoteChange }: UseRealtimeTodosOpt
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, onRemoteChange])
+  }, [userId]) // 不再依赖 onRemoteChange，通过 ref 访问最新回调
 
   return { markPending, isConnected }
 }

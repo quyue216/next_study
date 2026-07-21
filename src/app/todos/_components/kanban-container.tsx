@@ -12,6 +12,8 @@ import {
   uploadTodoAttachments,
   moveTodoToStatus,
   updateTodoStatus,
+  createTodoClient,
+  restoreTodoFromTrash,
 } from "../actions"
 import { TodoHeader } from "./todo-header"
 import { AddTodoInput } from "./add-todo-input"
@@ -92,7 +94,7 @@ export function KanbanContainer({ initialTodos, userEmail, userId }: KanbanConta
   const handleAdd = (name: string) => {
     startTransition(async () => {
       try {
-        // Reload will happen via revalidatePath
+        await createTodoClient(name)
         toast.success("任务已创建")
       } catch {
         toast.error("创建失败")
@@ -134,6 +136,8 @@ export function KanbanContainer({ initialTodos, userEmail, userId }: KanbanConta
   }
 
   const handleDelete = (id: string) => {
+    // 保存删除前的列状态用于回滚
+    const savedColumns = { ...columns }
     startTransition(async () => {
       setColumns(prev => {
         const newCols = { ...prev }
@@ -149,7 +153,8 @@ export function KanbanContainer({ initialTodos, userEmail, userId }: KanbanConta
             label: "撤销",
             onClick: () => startTransition(async () => {
               try {
-                // TODO: restore
+                await restoreTodoFromTrash(id)
+                // 恢复成功后重新加载
                 toast.success("已恢复")
               } catch {
                 toast.error("恢复失败")
@@ -158,6 +163,8 @@ export function KanbanContainer({ initialTodos, userEmail, userId }: KanbanConta
           },
         })
       } catch {
+        // 回滚到删除前的状态
+        setColumns(savedColumns)
         toast.error("删除失败")
       }
     })

@@ -24,9 +24,6 @@ export function TodosWrapper({ initialTodos, userEmail, userId, filters, allTags
   const [isLoading, setIsLoading] = useState(false)
   const [prevKey, setPrevKey] = useState("")
 
-    console.log("🚀 ~ TodosWrapper ~ initialTodos:", initialTodos)
-
-
   // 当 URL 参数变化时，显示 loading 状态
   const currentKey = `${searchParams.get("page")}-${searchParams.get("pageSize")}-${searchParams.get("search")}-${searchParams.get("completed")}-${searchParams.get("dueDateFrom")}-${searchParams.get("dueDateTo")}-${searchParams.get("tag")}`
 

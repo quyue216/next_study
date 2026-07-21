@@ -68,7 +68,8 @@
       "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\[todoId]\" -Recurse -Force)",
       "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\subtasks\" -Recurse -Force)",
       "Bash(Remove-Item -Path \"src\\\\app\\\\api\\\\todos\\\\attachments\" -Recurse -Force)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npx next *)"
     ]
   },
   "enableAllProjectMcpServers": true,
