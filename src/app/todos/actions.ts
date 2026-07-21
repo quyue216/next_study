@@ -18,6 +18,15 @@ import {
   deleteAttachment,
   uploadAttachment,
   addAttachment,
+  softDeleteTodo,
+  softDeleteTodosByIds,
+  restoreTodo,
+  restoreTodosByIds,
+  permanentlyDeleteTodo,
+  permanentlyDeleteAllDeleted,
+  TodoStatus,
+  getTodosByStatus,
+  updateTodoStatusAndOrder,
 } from "./_lib/todo-service";
 import { revalidatePath } from "next/cache";
 
@@ -102,7 +111,7 @@ export async function removeTodo(id: string) {
   const user = await getCurrentUser();
   if (!user || !id) return;
 
-  await deleteTodo(user.id, id);
+  await softDeleteTodo(user.id, id);
   revalidatePath("/todos");
 }
 
@@ -110,7 +119,17 @@ export async function removeAllTodos() {
   const user = await getCurrentUser();
   if (!user) return;
 
-  await clearTodos(user.id);
+  await softDeleteTodosByIds(user.id, []);
+  // 批量软删除所有：先获取所有活跃 todo IDs
+  const supabase = await createServerClient();
+  const { data: allTodos } = await supabase
+    .from("todos")
+    .select("id")
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
+  if (allTodos && allTodos.length > 0) {
+    await softDeleteTodosByIds(user.id, allTodos.map(t => t.id));
+  }
   revalidatePath("/todos");
 }
 
@@ -118,7 +137,41 @@ export async function removeSelectedTodos(todoIds: string[]) {
   const user = await getCurrentUser();
   if (!user || todoIds.length === 0) return;
 
-  await deleteTodosByIds(user.id, todoIds);
+  await softDeleteTodosByIds(user.id, todoIds);
+  revalidatePath("/todos");
+}
+
+// ========== 回收站操作 ==========
+
+export async function restoreTodoFromTrash(id: string) {
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await restoreTodo(user.id, id);
+  revalidatePath("/todos");
+}
+
+export async function restoreSelectedTodos(ids: string[]) {
+  const user = await getCurrentUser();
+  if (!user || ids.length === 0) return;
+
+  await restoreTodosByIds(user.id, ids);
+  revalidatePath("/todos");
+}
+
+export async function permanentlyDeleteTodoAction(id: string) {
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await permanentlyDeleteTodo(user.id, id);
+  revalidatePath("/todos");
+}
+
+export async function emptyTrash() {
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  await permanentlyDeleteAllDeleted(user.id);
   revalidatePath("/todos");
 }
 
@@ -220,6 +273,76 @@ export async function reorderTodos(orderedIds: string[]) {
       .eq("user_id", user.id);
   }
 
+  revalidatePath("/todos");
+}
+
+export async function importTodosFromJSON(jsonString: string): Promise<{ imported: number; errors: string[] }> {
+  const user = await getCurrentUser();
+  if (!user) return { imported: 0, errors: ["未登录"] };
+
+  let parsed: Array<{
+    name?: string
+    completed?: boolean
+    priority?: string
+    dueDate?: string
+    tags?: string[]
+    subTasks?: Array<{ name: string; completed?: boolean }>
+    sortOrder?: number
+  }>;
+
+  try {
+    parsed = JSON.parse(jsonString);
+    if (!Array.isArray(parsed)) {
+      return { imported: 0, errors: ["JSON 格式无效：需要数组"] };
+    }
+  } catch {
+    return { imported: 0, errors: ["JSON 解析失败"] };
+  }
+
+  let imported = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < parsed.length; i++) {
+    const item = parsed[i];
+    if (!item.name || typeof item.name !== "string") {
+      errors.push(`第 ${i + 1} 项: 缺少有效名称`);
+      continue;
+    }
+
+    try {
+      await addTodo(user.id, {
+        name: item.name,
+        priority: (item.priority === "low" || item.priority === "medium" || item.priority === "high")
+          ? item.priority as Priority : undefined,
+        dueDate: item.dueDate || undefined,
+        tags: Array.isArray(item.tags) ? item.tags : undefined,
+        subTasks: Array.isArray(item.subTasks)
+          ? item.subTasks.map(st => typeof st === "string" ? st : st.name).filter(Boolean)
+          : undefined,
+      });
+      imported++;
+    } catch {
+      errors.push(`第 ${i + 1} 项 "${item.name}": 导入失败`);
+    }
+  }
+
+  revalidatePath("/todos");
+  return { imported, errors };
+}
+
+export async function updateTodoStatus(id: string, status: TodoStatus) {
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await updateTodo(user.id, id, { status });
+  revalidatePath("/todos");
+}
+
+export async function moveTodoToStatus(id: string, status: TodoStatus, sortOrder: number) {
+  const user = await getCurrentUser();
+  if (!user || !id) return;
+
+  await updateTodoStatusAndOrder(user.id, id, status, sortOrder);
   revalidatePath("/todos");
 }
 

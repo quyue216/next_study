@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/app/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Trash2 } from "lucide-react";
+import Link from "next/link";
 
 export function TodoHeader({
   email,
@@ -19,6 +21,12 @@ export function TodoHeader({
           {email && (
             <span className="text-sm text-muted-foreground">{email}</span>
           )}
+          <Link href="/todos/trash">
+            <Button variant="ghost" size="sm">
+              <Trash2 className="size-4 mr-1" />
+              回收站
+            </Button>
+          </Link>
           <ThemeToggle />
           <form action={logoutAction}>
             <Button type="submit" variant="outline" size="sm">

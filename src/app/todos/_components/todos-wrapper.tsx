@@ -8,6 +8,7 @@ import { type Todo, type PaginatedResult } from "../_lib/todo-service"
 interface TodosWrapperProps {
   initialTodos: Todo[]
   userEmail?: string
+  userId?: string
   filters?: any
   allTags?: string[]
   pagination: {
@@ -18,7 +19,7 @@ interface TodosWrapperProps {
   }
 }
 
-export function TodosWrapper({ initialTodos, userEmail, filters, allTags, pagination: initialPagination }: TodosWrapperProps) {
+export function TodosWrapper({ initialTodos, userEmail, userId, filters, allTags, pagination: initialPagination }: TodosWrapperProps) {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [prevKey, setPrevKey] = useState("")
@@ -43,6 +44,7 @@ export function TodosWrapper({ initialTodos, userEmail, filters, allTags, pagina
     <TodosContainer
       initialTodos={initialTodos}
       userEmail={userEmail}
+      userId={userId}
       filters={filters}
       allTags={allTags}
       pagination={initialPagination}

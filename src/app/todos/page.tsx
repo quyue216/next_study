@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase.server";
 import { TodosWrapper } from "./_components/todos-wrapper";
-import { getTodosPaginated, getTagsByUser, type PaginatedResult, type Todo } from "./_lib/todo-service";
+import { KanbanContainer } from "./_components/kanban-container";
+import { getTodosPaginated, getTagsByUser, getTodosByStatus, type PaginatedResult, type Todo } from "./_lib/todo-service";
 
 interface PageProps {
   searchParams?: Promise<{
@@ -12,6 +13,7 @@ interface PageProps {
     dueDateFrom?: string
     dueDateTo?: string
     tag?: string
+    view?: string
   }>
 }
 
@@ -24,6 +26,24 @@ export default async function Todos({ searchParams }: PageProps) {
   }
 
   const params = await searchParams
+  const view = params?.view || "list"
+
+  // Kanban 视图
+  if (view === "kanban") {
+    const todosByStatus = await getTodosByStatus(data.user.id);
+
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <KanbanContainer
+          initialTodos={todosByStatus}
+          userEmail={data.user.email}
+          userId={data.user.id}
+        />
+      </div>
+    );
+  }
+
+  // 列表视图
   const page = params?.page ? parseInt(params.page, 10) : 1
   const pageSize = params?.pageSize ? parseInt(params.pageSize, 10) : 10
 
@@ -43,6 +63,7 @@ export default async function Todos({ searchParams }: PageProps) {
       <TodosWrapper
         initialTodos={paginatedTodos.data}
         userEmail={data.user.email}
+        userId={data.user.id}
         filters={filters}
         allTags={allTags}
         pagination={{

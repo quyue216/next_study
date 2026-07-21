@@ -13,6 +13,7 @@ import {
   removeAttachment,
   uploadTodoAttachments,
   reorderTodos,
+  restoreTodoFromTrash,
 } from '../actions'
 import { TodoHeader } from './todo-header'
 import { TodoList } from './todo-list'
@@ -25,6 +26,10 @@ import { Search, X, Filter, Trash2, CheckSquare, Square } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { CreateTodoDialog } from './create-todo-dialog'
+import { ImportExportMenu } from './import-export-menu'
+import { ViewSwitcher } from './view-switcher'
+import { RealtimeStatus } from './realtime-status'
+import { useRealtimeTodos } from '../_lib/use-realtime-todos'
 import { toast } from 'sonner'
 
 type OptimisticAction =
@@ -40,6 +45,7 @@ type OptimisticAction =
 interface TodosContainerProps {
   initialTodos: Todo[]
   userEmail?: string
+  userId?: string
   filters?: {
     search?: string
     completed?: boolean
@@ -52,7 +58,7 @@ interface TodosContainerProps {
   isLoading?: boolean
 }
 
-export function TodosContainer({ initialTodos, userEmail, filters, allTags = [], pagination, isLoading = false }: TodosContainerProps) {
+export function TodosContainer({ initialTodos, userEmail, userId, filters, allTags = [], pagination, isLoading = false }: TodosContainerProps) {
   const [dbTodos, setDbTodos] = useState<Todo[]>(initialTodos)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -70,6 +76,35 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
   const [selectedTodoIds, setSelectedTodoIds] = useState<Set<string>>(new Set())
   // 删除动画中
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
+
+  // 实时同步
+  const { markPending, isConnected } = useRealtimeTodos({
+    userId: userId || "",
+    onRemoteChange: (event) => {
+      switch (event.type) {
+        case "INSERT":
+          if (event.todo && !event.todo.deletedAt) {
+            setDbTodos(prev => {
+              if (prev.find(t => t.id === event.todo!.id)) return prev
+              return [event.todo!, ...prev]
+            })
+          }
+          break
+        case "UPDATE":
+          if (event.todo && !event.todo.deletedAt) {
+            setDbTodos(prev =>
+              prev.map(t => t.id === event.todo!.id ? { ...t, ...event.todo } : t)
+            )
+          } else if (event.todo?.deletedAt) {
+            setDbTodos(prev => prev.filter(t => t.id !== event.todo!.id))
+          }
+          break
+        case "DELETE":
+          setDbTodos(prev => prev.filter(t => t.id !== event.oldRecord!.id))
+          break
+      }
+    },
+  })
 
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -163,7 +198,21 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
             next.delete(id)
             return next
           })
-          toast.success('任务已删除')
+          toast.success('已移至回收站', {
+            action: {
+              label: '撤销',
+              onClick: () => {
+                startTransition(async () => {
+                  try {
+                    await restoreTodoFromTrash(id)
+                    toast.success('已恢复')
+                  } catch {
+                    toast.error('恢复失败')
+                  }
+                })
+              },
+            },
+          })
         } catch (err) {
           setRemovingIds(prev => {
             const next = new Set(prev)
@@ -210,7 +259,7 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
         await removeSelectedTodos(idsToDelete)
         setDbTodos((prev) => prev.filter(t => !idsToDelete.includes(t.id)))
         setSelectedTodoIds(new Set())
-        toast.success(`已删除 ${idsToDelete.length} 个任务`)
+        toast.success(`已移动 ${idsToDelete.length} 个任务到回收站`)
       } catch (err) {
         toast.error('批量删除失败，请重试')
         console.error('批量删除失败:', err)
@@ -444,6 +493,10 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
                 {hasActiveFilters && <span className="ml-1 text-xs">(有)</span>}
               </Button>
 
+              <ImportExportMenu todos={optimisticTodos} />
+
+              <ViewSwitcher currentView="list" />
+
               {/* 清除筛选按钮 */}
               {hasActiveFilters && (
                 <Button type="button" variant="ghost" onClick={clearAllFilters}>
@@ -549,12 +602,15 @@ export function TodosContainer({ initialTodos, userEmail, filters, allTags = [],
       )}
 
       {/* 同步中全局指示器 */}
-      {isPending && (
-        <div className="flex items-center justify-center gap-2 text-xs text-blue-500 animate-pulse">
-          <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
-          正在与服务器同步...
-        </div>
-      )}
+      <div className="flex items-center justify-center gap-4">
+        <RealtimeStatus isConnected={isConnected} />
+        {isPending && (
+          <div className="flex items-center gap-2 text-xs text-blue-500 animate-pulse">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+            正在与服务器同步...
+          </div>
+        )}
+      </div>
 
       {/* 编辑对话框 */}
       <CreateTodoDialog

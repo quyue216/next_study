@@ -181,8 +181,11 @@ export function TodoItem({ todo, index, onToggle, onDelete, onEdit, onToggleSele
                 onToggle(todo.id, checked as boolean)
               }}
             />
-            <label htmlFor={checkboxId} className={`text-sm text-muted-foreground ${isPending ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
-              {todo.completed ? "已完成" : "未完成"}
+            <label htmlFor={checkboxId} className={`text-sm ${isPending ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${
+              todo.status === "in_progress" ? "text-yellow-600 font-medium" :
+              todo.completed ? "text-green-600" : "text-muted-foreground"
+            }`}>
+              {todo.status === "in_progress" ? "进行中" : todo.completed ? "已完成" : "待办"}
             </label>
           </div>
         </TableCell>

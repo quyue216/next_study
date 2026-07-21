@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase.server";
 
 export type Priority = 'low' | 'medium' | 'high';
+export type TodoStatus = 'todo' | 'in_progress' | 'done';
 
 // 生成唯一文件名
 function generateUniqueFileName(originalName: string): string {
@@ -144,6 +145,8 @@ export interface Todo {
   attachments?: TodoAttachment[]
   subTasks?: SubTask[]
   sortOrder?: number
+  deletedAt?: string
+  status?: TodoStatus
 }
 
 export interface SubTask {
@@ -174,6 +177,8 @@ function mapRow(row: Record<string, unknown>): Todo {
     dueDate: row.due_date ? String(row.due_date).substring(0, 10) : undefined,
     tags: row.tags as string[],
     sortOrder: row.sort_order as number,
+    deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
+    status: (row.status as TodoStatus) || (row.completed ? 'done' : 'todo'),
   }
 }
 
@@ -205,6 +210,7 @@ export async function getTodos(userId: string): Promise<Todo[]> {
     .from("todos")
     .select("*")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -249,13 +255,18 @@ export async function getTodosPaginated(
       sub_tasks (*)
     `, { count: "exact" })
     .eq("user_id", userId)
+    .is("deleted_at", null)
 
   if (filters?.search) {
     query = query.ilike("name", `%${filters.search}%`)
   }
 
   if (filters?.completed !== undefined) {
-    query = query.eq("completed", filters.completed)
+    if (filters.completed) {
+      query = query.eq("status", "done")
+    } else {
+      query = query.in("status", ["todo", "in_progress"])
+    }
   }
 
   if (filters?.dueDateFrom) {
@@ -304,6 +315,7 @@ export async function getTodosCount(userId: string): Promise<number> {
     .from("todos")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
+    .is("deleted_at", null)
 
   if (error) {
     console.error("[getTodosCount] Error:", error)
@@ -419,14 +431,20 @@ export async function addTodo(userId: string, data: string | CreateTodoData): Pr
 export async function updateTodo(
   userId: string,
   id: string,
-  updates: Partial<Pick<Todo, "name" | "completed" | "priority" | "dueDate" | "tags">>
+  updates: Partial<Pick<Todo, "name" | "completed" | "priority" | "dueDate" | "tags" | "status">>
 ): Promise<Todo[]> {
   const payload: Record<string, string | boolean | Priority | string[] | undefined> = {}
   if (updates.name !== undefined) payload.name = updates.name
-  if (updates.completed !== undefined) payload.completed = updates.completed
   if (updates.priority !== undefined) payload.priority = updates.priority
   if (updates.dueDate !== undefined) payload.due_date = updates.dueDate
   if (updates.tags !== undefined) payload.tags = updates.tags
+  if (updates.status !== undefined) {
+    payload.status = updates.status
+    payload.completed = updates.status === 'done'
+  } else if (updates.completed !== undefined) {
+    payload.completed = updates.completed
+    payload.status = updates.completed ? 'done' : 'todo'
+  }
 
   const supabase = await createServerClient()
   const { error } = await supabase
@@ -474,7 +492,7 @@ export async function setTodoCompleted(
   const supabase = await createServerClient()
   const { error } = await supabase
     .from("todos")
-    .update({ completed })
+    .update({ completed, status: completed ? 'done' : 'todo' })
     .eq("id", id)
     .eq("user_id", userId)
 
@@ -489,8 +507,9 @@ export async function setAllTodoCompleted(
   const supabase = await createServerClient()
   const { error } = await supabase
     .from("todos")
-    .update({ completed })
+    .update({ completed, status: completed ? 'done' : 'todo' })
     .eq("user_id", userId)
+    .is("deleted_at", null)
 
   if (error) throw error
   return getTodos(userId)
@@ -525,6 +544,7 @@ export async function getTagsByUser(userId: string): Promise<string[]> {
     .from("todos")
     .select("tags")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .not("tags", "is", null) // 过滤掉没有标签的待办
 
   if (error) throw error
@@ -545,6 +565,7 @@ export async function getTodosByTag(userId: string, tag: string): Promise<Todo[]
     .select("*")
     .eq("user_id", userId)
     .contains("tags", [tag]) // 只返回包含指定标签的待办
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
   if (error) throw error
@@ -683,4 +704,145 @@ export async function deleteAttachment(attachmentId: string): Promise<TodoAttach
 
   if (error) throw error
   return getAttachments(attachmentData.todo_id)
+}
+
+// ========== 回收站相关 ==========
+
+export async function softDeleteTodo(userId: string, id: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", userId)
+
+  if (error) throw error
+}
+
+export async function softDeleteTodosByIds(userId: string, ids: string[]): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .in("id", ids)
+
+  if (error) throw error
+}
+
+export async function restoreTodo(userId: string, id: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .update({ deleted_at: null })
+    .eq("id", id)
+    .eq("user_id", userId)
+
+  if (error) throw error
+}
+
+export async function restoreTodosByIds(userId: string, ids: string[]): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .update({ deleted_at: null })
+    .eq("user_id", userId)
+    .in("id", ids)
+
+  if (error) throw error
+}
+
+export async function getDeletedTodosPaginated(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<PaginatedResult<Todo>> {
+  const supabase = await createServerClient()
+
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from("todos")
+    .select("*", { count: "exact" })
+    .eq("user_id", userId)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false })
+    .range(from, to)
+
+  if (error) throw error
+
+  const todos = (data ?? []).map(mapRow)
+  const total = count ?? 0
+  const totalPages = Math.ceil(total / pageSize)
+
+  return { data: todos, total, page, pageSize, totalPages }
+}
+
+export async function permanentlyDeleteTodo(userId: string, id: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+
+  if (error) throw error
+}
+
+export async function permanentlyDeleteAllDeleted(userId: string): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .eq("user_id", userId)
+    .not("deleted_at", "is", null)
+
+  if (error) throw error
+}
+
+// ========== 看板相关 ==========
+
+export async function getTodosByStatus(userId: string): Promise<{
+  todo: Todo[]
+  in_progress: Todo[]
+  done: Todo[]
+}> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from("todos")
+    .select("*")
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+
+  const todos = (data ?? []).map(mapRow)
+  return {
+    todo: todos.filter(t => t.status === 'todo' || !t.status),
+    in_progress: todos.filter(t => t.status === 'in_progress'),
+    done: todos.filter(t => t.status === 'done'),
+  }
+}
+
+export async function updateTodoStatusAndOrder(
+  userId: string,
+  id: string,
+  status: TodoStatus,
+  sortOrder: number
+): Promise<void> {
+  const supabase = await createServerClient()
+  const { error } = await supabase
+    .from("todos")
+    .update({
+      status,
+      completed: status === 'done',
+      sort_order: sortOrder,
+    })
+    .eq("id", id)
+    .eq("user_id", userId)
+
+  if (error) throw error
 }
